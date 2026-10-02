@@ -1,38 +1,45 @@
 import Link from "next/link";
-import { Activity, Cpu, Crosshair, Timer, Wrench, Zap } from "lucide-react";
+import { CircuitBoard, Cpu, Crosshair, Target, Zap } from "lucide-react";
 import { Wordmark } from "@/components/Wordmark";
 import { TraceDivider } from "@/components/TraceDivider";
 import { WeaknessHeatmap } from "@/components/WeaknessHeatmap";
+
+const LEDGER = [
+  { v: "200", l: "MCQs" },
+  { v: "180", l: "MINUTES" },
+  { v: "~54s", l: "PER QUESTION" },
+  { v: "ZERO", l: "NEGATIVE MARKING" },
+];
 
 const STEPS = [
   {
     n: "01",
     title: "TAKE A SESSION",
-    body: "20 questions. 18 minutes. Paced like the real NET — one question at a time, no skipping the hard ones.",
+    body: "One question at a time, paced. 20 questions in 18 minutes — no skipping the hard ones.",
     icon: Zap,
     trace: "TRACE 01 // SESSION START",
   },
   {
     n: "02",
     title: "CLASSIFY EVERY MISTAKE",
-    body: "Wrong? Say why: concept gap, misread, calculation slip, time pressure. The label is the learning.",
+    body: "Concept-gap, misread, time-pressure, silly-mistake, formula-error. Name the fault or it repeats.",
     icon: Crosshair,
     trace: "TRACE 02 // FAULT CLASS",
   },
   {
     n: "03",
-    title: "GET DRILLS FROM YOUR GRAPH",
-    body: "Every classified error feeds your weakness graph. Next sessions target exactly where you bleed marks.",
-    icon: Activity,
-    trace: "TRACE 03 // AUTO-REROUTE",
+    title: "WATCH THE WEAKNESS GRAPH",
+    body: "Every miss gets routed onto your circuit. Hot nets glow gold, mastered ones test green.",
+    icon: CircuitBoard,
+    trace: "TRACE 03 // NET ROUTED",
   },
-];
-
-const NET_STATS = [
-  { v: "200", l: "MCQs" },
-  { v: "180", l: "MINUTES" },
-  { v: "~54s", l: "PER QUESTION" },
-  { v: "ZERO", l: "NEGATIVE MARKING" },
+  {
+    n: "04",
+    title: "DRILL WHAT LEAKS",
+    body: "Targeted reps on your weakest nets, on repeat, until the board tests green.",
+    icon: Target,
+    trace: "TRACE 04 // REROUTE LOOP",
+  },
 ];
 
 export default function LandingPage() {
@@ -55,32 +62,34 @@ export default function LandingPage() {
       </header>
 
       <main className="space-y-6">
-        {/* HERO */}
-        <section aria-label="Intro" className="card reveal">
+        {/* SECTION 1 — HERO */}
+        <section aria-label="Briefing" className="card reveal">
           <div className="grid gap-6 md:grid-cols-[1.25fr_1fr] md:items-center">
             <div>
-              <Wordmark align="left" size="clamp(2.75rem, 6vw, 4.5rem)" />
-              <p className="label mt-3">
-                NUST ENTRY TEST • RE-PREPARATION MODE
+              <p className="label text-accent">
+                RE-PREPARATION PROTOCOL // REV A
               </p>
+              <div className="mt-2">
+                <Wordmark align="left" size="clamp(2.75rem, 6vw, 4.5rem)" />
+              </div>
               <p className="mt-4 max-w-[52ch] font-mono text-[15px] leading-relaxed text-cream">
                 My brother missed NUST. I built him the thing that makes sure he never loses the same mark twice.
               </p>
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                <Link href="/app" className="btn-primary flex flex-1 items-center justify-center gap-2 text-center text-xl">
-                  <Zap className="h-5 w-5" aria-hidden="true" />
-                  BEGIN
-                </Link>
-                <Link href="/app" className="btn-secondary flex flex-1 items-center justify-center gap-2 text-center text-xl">
-                  <Cpu className="h-5 w-5" aria-hidden="true" />
-                  LAUNCH APP
-                </Link>
-              </div>
-              <p className="mt-3 font-mono text-xs text-cream-dim">
-                NEXT DRILL // 20 QUESTIONS • 18 MINUTES • PACED
-              </p>
+              <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="NET format ledger">
+                {LEDGER.map((s) => (
+                  <div key={s.l} className="copper-border bg-pcb-panel px-2 py-2.5 text-center">
+                    <dt className="sr-only">{s.l}</dt>
+                    <dd className="font-display text-2xl font-bold text-gold">{s.v}</dd>
+                    <dd className="label mt-0.5 text-[10px]">{s.l}</dd>
+                  </div>
+                ))}
+              </dl>
+              <Link href="/app" className="btn-primary mt-5 flex items-center justify-center gap-2 text-center text-xl">
+                <Zap className="h-5 w-5" aria-hidden="true" />
+                BEGIN
+              </Link>
             </div>
-            {/* Schematic side panel */}
+            {/* Schematic readout — the hero's compass */}
             <div className="copper-border bg-pcb-panel p-4 font-mono text-[13px] leading-relaxed">
               <div className="mb-3 flex items-center justify-between">
                 <span className="font-display flex items-center gap-2 text-sm font-bold tracking-wide text-accent">
@@ -120,22 +129,21 @@ export default function LandingPage() {
 
         <TraceDivider />
 
-        {/* HOW IT WORKS */}
-        <section aria-label="How it works" className="card reveal" style={{ animationDelay: "80ms" }}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="font-display flex items-center gap-2 text-2xl font-bold tracking-wide text-cream">
-              <Wrench className="h-6 w-6 text-copper" aria-hidden="true" />
-              HOW IT WORKS
+        {/* SECTION 2 — FOUR-STEP BAND */}
+        <section aria-label="How a comeback runs" className="card reveal" style={{ animationDelay: "80ms" }}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-display text-2xl font-bold tracking-wide text-cream">
+              HOW A COMEBACK RUNS
             </h2>
-            <span className="label hidden sm:inline">
-              3 STEPS • NO ACCOUNTS • NO FLUFF
+            <span className="label">
+              4 STEPS • NO ACCOUNTS • NO FLUFF
             </span>
           </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            {STEPS.map((s) => (
-              <div
+          <ol className="grid gap-3 md:grid-cols-2">
+            {STEPS.map((s, i) => (
+              <li
                 key={s.n}
-                className="copper-border bg-pcb-panel p-4 odd:md:translate-y-0 even:md:translate-y-3"
+                className={`copper-border relative bg-pcb-panel p-4 ${i % 2 === 1 ? "md:translate-y-3" : ""}`}
               >
                 <p className="flex items-center justify-between">
                   <span className="font-display text-3xl font-bold text-accent">{s.n}</span>
@@ -144,59 +152,49 @@ export default function LandingPage() {
                 <p className="font-display mt-1 text-xl font-bold tracking-wide text-cream">{s.title}</p>
                 <p className="mt-2 font-mono text-[13px] leading-relaxed text-cream-dim">{s.body}</p>
                 <p className="mt-3 font-mono text-[11px] text-accent">{s.trace}</p>
-              </div>
+                {i < STEPS.length - 1 && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -bottom-[15px] left-8 hidden h-[15px] w-[2px] bg-copper md:block"
+                  />
+                )}
+              </li>
             ))}
-          </div>
+          </ol>
         </section>
 
         <TraceDivider />
 
-        {/* HEATMAP PREVIEW */}
-        <section aria-label="Weakness graph preview" className="reveal" style={{ animationDelay: "160ms" }}>
+        {/* SECTION 3 — THE BOARD */}
+        <section aria-label="The board" className="reveal" style={{ animationDelay: "160ms" }}>
+          <div className="mb-4 text-center">
+            <p className="font-display text-2xl font-bold tracking-wide text-cream">
+              Welcome to NEVERTWICE
+            </p>
+            <p className="mt-1 font-mono text-sm text-cream-dim">
+              You have one mission. Make every mark count.
+            </p>
+          </div>
           <WeaknessHeatmap
             nodes={[]}
-            title="WEAKNESS HEATMAP — PREVIEW"
-            emptyAction={{ href: "/app", label: "OPEN APP" }}
+            title="THE BOARD — LIVE CIRCUIT"
+            emptyAction={{ href: "/app", label: "BEGIN" }}
           />
-          <p className="label mt-2 text-center">
-            PREVIEW SHOWS THE UNPOPULATED BOARD • YOUR LIVE CIRCUIT LIVES IN THE APP
-          </p>
         </section>
 
         <TraceDivider />
 
-        {/* NET FORMAT STRIP */}
-        <section aria-label="NET format" className="card reveal" style={{ animationDelay: "240ms" }}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="font-display flex items-center gap-2 text-2xl font-bold tracking-wide text-cream">
-              <Timer className="h-6 w-6 text-copper" aria-hidden="true" />
-              NET FORMAT // KNOW THE ARENA
-            </h2>
-          </div>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            {NET_STATS.map((s) => (
-              <div key={s.l} className="copper-border bg-pcb-panel p-4 text-center">
-                <p className="font-display text-4xl font-bold text-gold">{s.v}</p>
-                <p className="label mt-1">{s.l}</p>
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 font-mono text-[13px] leading-relaxed text-cream-dim">
-            200 MCQs in 180 minutes means ~54 seconds per question with no negative marking — speed and accuracy both
-            count, and every repeated mistake is a free mark thrown away. That&apos;s exactly what the graph kills.
+        {/* SECTION 4 — FOOTER */}
+        <footer className="card reveal px-4 py-8 text-center" style={{ animationDelay: "240ms" }}>
+          <Wordmark align="center" size="clamp(2rem, 5vw, 3rem)" />
+          <p className="font-display mt-4 text-xl font-bold tracking-wide text-cream">
+            BUILT SO HE NEVER LOSES THE SAME MARK TWICE
           </p>
-          <Link href="/app" className="btn-primary mt-4 block text-center text-xl">
-            BEGIN → ENTER THE APP
-          </Link>
-        </section>
+          <p className="label mt-2">
+            NEVERTWICE • NUST NET RE-PREPARATION • <Link href="/app" className="underline hover:text-accent">OPEN APP</Link>
+          </p>
+        </footer>
       </main>
-
-      <footer className="copper-border reveal mt-6 bg-pcb-deep px-4 py-4 text-center">
-        <p className="font-display text-xl font-bold tracking-wide text-cream">BUILT SO HE NEVER LOSES THE SAME MARK TWICE</p>
-        <p className="label mt-1">
-          NEVERTWICE • NUST NET RE-PREPARATION • <Link href="/app" className="underline hover:text-accent">OPEN APP</Link>
-        </p>
-      </footer>
     </div>
   );
 }
