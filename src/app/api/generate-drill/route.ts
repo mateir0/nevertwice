@@ -33,6 +33,44 @@ const VALID_ERRORS = new Set([
   "formula-error",
 ]);
 
+// ---------- per-IP rate limiting (Groq quota guard) ----------
+
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const rateBuckets = new Map<string, { count: number; windowStart: number }>();
+
+/** Client IP: first entry of x-forwarded-for, else "unknown" (one bucket). */
+function clientIp(req: Request): string {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return "unknown";
+}
+
+/**
+ * True when this IP already used its 10 generations in the current hour.
+ * Successful check consumes one slot. Expired windows reset on next hit;
+ * stale buckets are swept opportunistically to bound memory.
+ */
+function rateLimited(ip: string): boolean {
+  const now = Date.now();
+  const bucket = rateBuckets.get(ip);
+  if (!bucket || now - bucket.windowStart >= RATE_LIMIT_WINDOW_MS) {
+    rateBuckets.set(ip, { count: 1, windowStart: now });
+    if (rateBuckets.size > 1000) {
+      for (const [k, b] of rateBuckets) {
+        if (now - b.windowStart >= RATE_LIMIT_WINDOW_MS) rateBuckets.delete(k);
+      }
+    }
+    return false;
+  }
+  if (bucket.count >= RATE_LIMIT_MAX) return true;
+  bucket.count += 1;
+  return false;
+}
+
 function validTargets(v: unknown): v is DrillGenTarget[] {
   if (!Array.isArray(v) || v.length === 0 || v.length > 3) return false;
   let total = 0;
@@ -100,7 +138,14 @@ export async function POST(req: Request): Promise<NextResponse> {
   }
   const targets = (body as { targets?: unknown } | null)?.targets;
   if (!validTargets(targets)) {
+    // Malformed requests never touch Groq and never consume rate-limit quota.
     return NextResponse.json({ error: "bad-targets" }, { status: 400 });
+  }
+
+  // Quota guard BEFORE Groq: 10 generations per IP per hour. The client
+  // treats 429 like any other failure and falls back to the seed bank.
+  if (rateLimited(clientIp(req))) {
+    return NextResponse.json({ error: "rate-limited" }, { status: 429 });
   }
 
   const prompt = buildDrillPrompt(targets);
