@@ -1,178 +1,188 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=VT323&display=swap');
 
 @theme {
-  --color-charcoal: #333333;
-  --color-charcoal-light: #3d3d3d;
-  --color-charcoal-dark: #2a2a2a;
-  --color-crt-green: #33FF00;
-  --color-crt-green-dim: #26cc00;
-  --color-phosphor-amber: #FFB000;
-  --color-phosphor-amber-dim: #cc8d00;
-  --color-tape-red: #CC0000;
-  --color-tape-red-dim: #990000;
-  --color-terminal-bg: #1a1a1a;
-  --color-terminal-border: #444444;
-  --color-static-grey: #999999;
-  --color-warm-beige: #D2B48C;
-  --color-off-white: #E8E0D0;
-  --color-deep-navy: #1B2838;
+  /* ---- PCB Schematic Architecture palette (DESIGN.md, exact) ---- */
+  --color-pcb: #0F3B2C;
+  --color-pcb-deep: #0B2E22;
+  --color-pcb-panel: #12402F;
+  --color-cream: #EAD0AC;
+  --color-cream-dim: #C9AE85;
+  --color-accent: #D98C53;
+  --color-accent-dark: #C07640;
+  --color-copper: #B87333;
+  --color-silver: #C0C0C0;
+  --color-gold: #FFD700;
+  --color-trace: #165B45;
+  --color-brick: #B3402E;
 
-  --font-display: "VT323", monospace;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-display: "Courier New", Courier, monospace;
+  --font-mono: "Courier New", Courier, monospace;
 }
 
-@keyframes scan-drift {
-  0% { background-position: 0 0; }
-  100% { background-position: 0 120px; }
-}
-
-@keyframes crt-flicker {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.96; }
-}
-
-@keyframes heat-pop {
-  from { opacity: 0; transform: translateY(10px); }
+@keyframes board-rise {
+  from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ---- Cassette Futurism custom utilities (must be @utility so @apply resolves) ---- */
-
-@utility scanlines {
-  position: relative;
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-      0deg,
-      rgba(0, 0, 0, 0.16) 0px,
-      rgba(0, 0, 0, 0.16) 1px,
-      transparent 1px,
-      transparent 3px
-    );
-    animation: scan-drift 8s linear infinite;
-    z-index: 40;
-  }
+@keyframes via-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }
 
-@utility crt-glow {
-  box-shadow:
-    0 0 20px rgba(51, 255, 0, 0.15),
-    0 0 40px rgba(51, 255, 0, 0.05),
-    inset 0 0 20px rgba(51, 255, 0, 0.05);
-}
+/* ---- PCB Schematic Architecture custom utilities ---- */
 
-@utility phosphor-glow {
-  box-shadow:
-    0 0 20px rgba(255, 176, 0, 0.2),
-    0 0 40px rgba(255, 176, 0, 0.08),
-    inset 0 0 20px rgba(255, 176, 0, 0.05);
-}
-
-@utility tape-glow {
-  box-shadow:
-    0 0 20px rgba(204, 0, 0, 0.2),
-    0 0 40px rgba(204, 0, 0, 0.08),
-    inset 0 0 20px rgba(204, 0, 0, 0.05);
-}
-
-@utility phosphor-grid {
+@utility pcb-texture {
+  background-color: var(--color-pcb);
   background-image:
-    linear-gradient(rgba(255, 176, 0, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 176, 0, 0.1) 1px, transparent 1px);
-  background-size: 20px 20px;
+    radial-gradient(circle at 12% 18%, rgba(22, 91, 69, 0.35) 0, transparent 42%),
+    radial-gradient(circle at 88% 82%, rgba(22, 91, 69, 0.28) 0, transparent 46%),
+    linear-gradient(rgba(234, 208, 172, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(234, 208, 172, 0.045) 1px, transparent 1px);
+  background-size: auto, auto, 28px 28px, 28px 28px;
 }
 
-@utility terminal-border {
-  border: 1px solid var(--color-terminal-border);
-  border-radius: 0;
+@utility copper-border {
+  border: 1px solid var(--color-copper);
+  border-radius: 0.5rem;
+}
+
+@utility trace-divider-line {
+  background: linear-gradient(90deg, var(--color-copper), var(--color-accent), var(--color-copper));
+  height: 2px;
+  border-radius: 2px;
+}
+
+@utility reveal {
+  animation: board-rise 420ms ease-out both;
+}
+
+@utility via-live {
+  animation: via-pulse 1.6s ease-in-out infinite;
 }
 
 @layer base {
   html {
-    background-color: var(--color-terminal-bg);
-    color: var(--color-crt-green);
+    background-color: var(--color-pcb);
+    color: var(--color-cream);
     font-family: var(--font-mono);
+    font-size: 16px;
+    line-height: 1.6;
   }
 
   body {
     min-height: 100dvh;
-    background-color: var(--color-terminal-bg);
-    color: var(--color-crt-green);
+    background-color: var(--color-pcb);
+    color: var(--color-cream);
     font-family: var(--font-mono);
+    font-size: 1rem;
+    line-height: 1.6;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    letter-spacing: 0.05em;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--color-cream);
   }
 
   ::selection {
-    background-color: var(--color-phosphor-amber);
-    color: var(--color-terminal-bg);
+    background-color: var(--color-gold);
+    color: var(--color-pcb-deep);
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply font-display px-6 py-3 bg-transparent border-2 uppercase tracking-wider transition-all duration-200;
-    border-color: var(--color-crt-green);
-    color: var(--color-crt-green);
-    @apply crt-glow;
+    @apply px-6 py-3 font-bold uppercase tracking-wider transition-all duration-200;
+    font-family: var(--font-display);
+    background-color: var(--color-accent);
+    color: var(--color-pcb-deep);
+    border: 1.5px solid var(--color-accent);
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   }
   .btn-primary:hover {
-    background-color: var(--color-crt-green);
-    color: var(--color-terminal-bg);
+    background-color: var(--color-accent-dark);
+    border-color: var(--color-accent-dark);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+  .btn-primary:active {
+    transform: translateY(1px);
+    box-shadow: none;
   }
 
   .btn-secondary {
-    @apply font-display px-6 py-3 bg-transparent border-2 uppercase tracking-wider transition-all duration-200;
-    border-color: var(--color-phosphor-amber);
-    color: var(--color-phosphor-amber);
-    @apply phosphor-glow;
+    @apply px-6 py-3 font-bold uppercase tracking-wider transition-all duration-200;
+    font-family: var(--font-display);
+    background-color: transparent;
+    border: 1.5px solid var(--color-copper);
+    color: var(--color-cream);
+    border-radius: 0.5rem;
   }
   .btn-secondary:hover {
-    background-color: var(--color-phosphor-amber);
-    color: var(--color-terminal-bg);
+    background-color: rgba(184, 115, 51, 0.14);
+    border-color: var(--color-accent);
+  }
+  .btn-secondary:active {
+    transform: translateY(1px);
   }
 
   .btn-danger {
-    @apply font-display px-6 py-3 bg-transparent border-2 uppercase tracking-wider transition-all duration-200;
-    border-color: var(--color-tape-red);
-    color: var(--color-tape-red);
-    @apply tape-glow;
+    @apply px-6 py-3 font-bold uppercase tracking-wider transition-all duration-200;
+    font-family: var(--font-display);
+    background-color: transparent;
+    border: 1.5px solid var(--color-brick);
+    color: var(--color-cream);
+    border-radius: 0.5rem;
   }
   .btn-danger:hover {
-    background-color: var(--color-tape-red);
-    color: var(--color-terminal-bg);
+    background-color: rgba(179, 64, 46, 0.16);
+  }
+  .btn-danger:active {
+    transform: translateY(1px);
   }
 
   .card {
-    background-color: var(--color-charcoal);
-    @apply terminal-border scanlines p-4;
+    background-color: var(--color-pcb-deep);
+    border: 1px solid var(--color-copper);
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    @apply p-4;
   }
 
   .input-field {
-    @apply w-full px-4 py-3 font-mono;
-    background-color: var(--color-terminal-bg);
-    border: 2px solid var(--color-terminal-border);
-    color: var(--color-crt-green);
+    @apply w-full px-4 py-3;
+    font-family: var(--font-mono);
+    background-color: var(--color-pcb-deep);
+    border: 1px solid var(--color-copper);
+    border-radius: 0.5rem;
+    color: var(--color-cream);
   }
   .input-field:focus {
     outline: none;
-    border-color: var(--color-crt-green);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-accent);
   }
 
   .chip {
-    @apply font-display min-h-[56px] px-4 py-3 uppercase tracking-wider transition-all duration-150;
+    @apply px-4 py-3 uppercase tracking-wider transition-all duration-200 min-h-[56px];
+    font-family: var(--font-display);
+    font-weight: 700;
     background-color: transparent;
-    border: 2px solid var(--color-terminal-border);
-    color: var(--color-crt-green);
+    border: 1.5px solid var(--color-copper);
+    border-radius: 0.5rem;
+    color: var(--color-cream);
   }
   .chip:hover {
-    border-color: var(--color-crt-green);
+    border-color: var(--color-accent);
+    background-color: rgba(217, 140, 83, 0.1);
+  }
+
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--color-cream-dim);
   }
 }
