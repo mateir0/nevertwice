@@ -70,8 +70,71 @@ export default function LandingPage() {
 
       <main className="space-y-6 pt-6">
         {/* SECTION 1 — HERO, open background, split two-column */}
-        <section aria-label="Briefing" className="reveal px-1 py-10 sm:px-2">
-          <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-center">
+        <section aria-label="Briefing" className="reveal relative overflow-hidden px-1 py-10 sm:px-2">
+          {/* Abstract PCB artwork — atmosphere only, never above the text */}
+          <svg
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 h-full w-full"
+            viewBox="0 0 1200 560"
+            preserveAspectRatio="xMidYMid slice"
+            focusable="false"
+          >
+            {/* Sweeping copper traces */}
+            <g fill="none" stroke="#B87333" strokeWidth="3">
+              <path d="M-20,90 H260 L340,170 H640 L720,250 H1020 L1100,330 H1240" opacity="0.16" />
+              <path d="M-20,470 H200 L300,370 H560" opacity="0.14" />
+              <path d="M700,580 L700,440 L820,320 H1060 L1140,240 V60" opacity="0.15" />
+              <path d="M-20,250 H120 L190,320 H420" opacity="0.12" />
+              <path d="M900,580 L900,500 L980,420 H1240" opacity="0.12" />
+            </g>
+            {/* Solder-pad vias on the trace ends */}
+            <g fill="#B87333">
+              <circle cx="260" cy="90" r="7" opacity="0.18" />
+              <circle cx="720" cy="250" r="7" opacity="0.18" />
+              <circle cx="1100" cy="330" r="7" opacity="0.18" />
+              <circle cx="700" cy="440" r="7" opacity="0.16" />
+              <circle cx="1140" cy="240" r="7" opacity="0.16" />
+              <circle cx="120" cy="250" r="6" opacity="0.15" />
+              <circle cx="900" cy="500" r="6" opacity="0.15" />
+            </g>
+            {/* Big chip outline partially behind the headline */}
+            <g opacity="0.16">
+              <rect x="60" y="60" width="460" height="300" fill="none" stroke="#B87333" strokeWidth="2" />
+              <rect x="84" y="84" width="412" height="252" fill="none" stroke="#B87333" strokeWidth="1" />
+              <g stroke="#B87333" strokeWidth="3">
+                <line x1="110" y1="60" x2="110" y2="38" />
+                <line x1="180" y1="60" x2="180" y2="38" />
+                <line x1="250" y1="60" x2="250" y2="38" />
+                <line x1="320" y1="60" x2="320" y2="38" />
+                <line x1="390" y1="60" x2="390" y2="38" />
+                <line x1="460" y1="60" x2="460" y2="38" />
+                <line x1="110" y1="360" x2="110" y2="382" />
+                <line x1="180" y1="360" x2="180" y2="382" />
+                <line x1="250" y1="360" x2="250" y2="382" />
+                <line x1="320" y1="360" x2="320" y2="382" />
+                <line x1="390" y1="360" x2="390" y2="382" />
+                <line x1="460" y1="360" x2="460" y2="382" />
+                <line x1="60" y1="120" x2="38" y2="120" />
+                <line x1="60" y1="200" x2="38" y2="200" />
+                <line x1="60" y1="280" x2="38" y2="280" />
+                <line x1="520" y1="120" x2="542" y2="120" />
+                <line x1="520" y1="200" x2="542" y2="200" />
+                <line x1="520" y1="280" x2="542" y2="280" />
+              </g>
+            </g>
+            {/* Scattered component nodes and pads */}
+            <g fill="#B87333">
+              <rect x="980" y="120" width="14" height="14" opacity="0.16" />
+              <rect x="1050" y="420" width="14" height="14" opacity="0.14" />
+              <rect x="620" y="100" width="12" height="12" opacity="0.14" />
+              <circle cx="1020" cy="200" r="4" opacity="0.18" />
+              <circle cx="580" cy="480" r="4" opacity="0.16" />
+              <circle cx="240" cy="440" r="4" opacity="0.16" />
+              <circle cx="760" cy="140" r="4" opacity="0.15" />
+              <circle cx="60" cy="520" r="4" opacity="0.15" />
+            </g>
+          </svg>
+          <div className="relative grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-center">
             {/* LEFT — badge, headline, story, buttons */}
             <div>
               <p>
@@ -80,10 +143,10 @@ export default function LandingPage() {
                 </span>
               </p>
               <h1
-                className="font-display mt-4 font-bold text-cream"
+                className="font-display mt-4 font-bold"
                 style={{ fontSize: "clamp(3.5rem, 8vw, 6.5rem)", lineHeight: 0.95 }}
               >
-                NEVERTWICE
+                <span className="text-cream">NEVER</span><span className="text-gold">TWICE</span>
               </h1>
               <p className="mt-5 max-w-[52ch] border-l-2 border-copper pl-4 font-mono text-[15px] leading-relaxed text-cream">
                 My brother missed NUST. I built him the thing that makes sure he never loses the same mark twice.
@@ -101,19 +164,19 @@ export default function LandingPage() {
                 </Link>
               </div>
             </div>
-            {/* RIGHT — one tilted ledger card */}
-            <div className="card lg:rotate-[1.5deg]">
-              <p className="label text-accent">MISSION LEDGER</p>
+            {/* RIGHT — one tilted ledger card, inverted to cream */}
+            <div className="card bg-cream text-pcb-deep lg:rotate-[1.5deg]">
+              <p className="label text-pcb-deep">MISSION LEDGER</p>
               <dl className="mt-3 space-y-2" aria-label="NET format ledger">
                 {LEDGER.map((s) => (
-                  <div key={s.l} className="copper-border flex items-baseline justify-between gap-3 bg-pcb-panel px-4 py-3">
+                  <div key={s.l} className="copper-border flex items-baseline justify-between gap-3 bg-[rgba(15,59,44,0.08)] px-4 py-3">
                     <dt className="sr-only">{s.l}</dt>
                     <dd className="font-display text-3xl font-bold text-gold">{s.v}</dd>
-                    <dd className="label">{s.l}</dd>
+                    <dd className="label text-pcb-deep">{s.l}</dd>
                   </div>
                 ))}
               </dl>
-              <Link href="#board" className="btn-secondary mt-4 block text-center">
+              <Link href="#board" className="mt-4 block rounded-lg border-[1.5px] border-pcb-deep bg-pcb px-6 py-3 text-center font-display font-bold uppercase tracking-wider text-cream transition-all duration-200 hover:bg-pcb-panel active:translate-y-px">
                 View the board →
               </Link>
             </div>
