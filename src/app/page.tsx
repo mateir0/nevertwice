@@ -69,13 +69,23 @@ export default function LandingPage() {
       </header>
 
       <main className="space-y-6 pt-6">
-        {/* SECTION 1 — HERO, split two-column */}
-        <section aria-label="Briefing" className="card reveal px-4 py-10 sm:px-8">
-          <div className="grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:items-center">
-            {/* LEFT — info stack */}
+        {/* SECTION 1 — HERO, open background, split two-column */}
+        <section aria-label="Briefing" className="reveal px-1 py-10 sm:px-2">
+          <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-center">
+            {/* LEFT — badge, headline, story, buttons */}
             <div>
-              <p className="label text-accent">RE-PREPARATION PROTOCOL</p>
-              <p className="mt-4 max-w-[52ch] border-l-2 border-copper pl-4 font-mono text-[15px] leading-relaxed text-cream">
+              <p>
+                <span className="label inline-block rounded-full border border-copper px-3 py-1 text-accent">
+                  RE-PREPARATION PROTOCOL
+                </span>
+              </p>
+              <h1
+                className="font-display mt-4 font-bold text-cream"
+                style={{ fontSize: "clamp(3.5rem, 8vw, 6.5rem)", lineHeight: 0.95 }}
+              >
+                NEVERTWICE
+              </h1>
+              <p className="mt-5 max-w-[52ch] border-l-2 border-copper pl-4 font-mono text-[15px] leading-relaxed text-cream">
                 My brother missed NUST. I built him the thing that makes sure he never loses the same mark twice.
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -90,39 +100,22 @@ export default function LandingPage() {
                   How it works
                 </Link>
               </div>
-              <p className="label mt-8 text-accent">MISSION LEDGER</p>
-              <dl className="mt-3 grid grid-cols-3 gap-2" aria-label="NET format ledger">
+            </div>
+            {/* RIGHT — one tilted ledger card */}
+            <div className="card lg:rotate-[1.5deg]">
+              <p className="label text-accent">MISSION LEDGER</p>
+              <dl className="mt-3 space-y-2" aria-label="NET format ledger">
                 {LEDGER.map((s) => (
-                  <div key={s.l} className="copper-border bg-pcb-panel px-2 py-3 text-center">
+                  <div key={s.l} className="copper-border flex items-baseline justify-between gap-3 bg-pcb-panel px-4 py-3">
                     <dt className="sr-only">{s.l}</dt>
-                    <dd className="font-display text-2xl font-bold text-gold">{s.v}</dd>
-                    <dd className="label mt-0.5 text-[10px]">{s.l}</dd>
+                    <dd className="font-display text-3xl font-bold text-gold">{s.v}</dd>
+                    <dd className="label">{s.l}</dd>
                   </div>
                 ))}
               </dl>
-            </div>
-            {/* RIGHT — visual anchor */}
-            <div>
-              <Wordmark align="center" size="clamp(3rem, 7vw, 5rem)" />
-              <div className="copper-border mt-5 bg-pcb-panel p-4 font-mono text-[13px] leading-relaxed lg:rotate-[1.2deg]">
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="font-display flex items-center gap-2 text-sm font-bold tracking-wide text-accent">
-                    <Cpu className="h-4 w-4" aria-hidden="true" />
-                    SCHEMATIC // REV A
-                  </span>
-                  <span className="flex gap-1.5" aria-hidden="true">
-                    <span className="inline-block h-2.5 w-2.5 rounded-full border border-copper" />
-                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-copper" />
-                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-gold" />
-                  </span>
-                </div>
-                <p className="text-cream">WEAKNESS BUS: <span className="text-gold">ROUTING</span></p>
-                <p className="text-cream-dim">LAST FAULT: Quadratic Equations — misread (+1)</p>
-                <p className="text-cream-dim">DRILL QUEUED: 12 reps • Kinematics × Calculus</p>
-                <p className="mt-3 border-t border-copper pt-2 text-[12px] text-cream-dim">
-                  Top 3 leaking nets get re-routed on repeat until the board tests green.
-                </p>
-              </div>
+              <Link href="#board" className="btn-secondary mt-4 block text-center">
+                View the board →
+              </Link>
             </div>
           </div>
         </section>
