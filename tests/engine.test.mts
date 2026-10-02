@@ -49,6 +49,7 @@ import {
 import {
   getQuestionsForSession,
   getRecentQuestionIds,
+  getAllTopics,
   nustSeedQuestions,
 } from "../src/config/exams/nust.ts";
 
@@ -168,6 +169,32 @@ describe("CRITICAL 1 — one async pipeline, fallback instant without Groq", () 
   it("planDrill returns null on an empty graph", () => {
     store.set("nevertwice-weakness", JSON.stringify([]));
     assert.equal(planDrill(), null);
+  });
+
+  it("drill reason pluralizes the error noun by count", () => {
+    const mk = (n) =>
+      JSON.stringify(
+        Array.from({ length: n }, (_, i) => ({
+          id: `m${i}`,
+          questionId: `q${i}`,
+          topic: "Algebra",
+          subtopic: "Quadratic Equations",
+          errorType: "concept-gap",
+          timestamp: 1000 + i,
+          sessionId: "s",
+        })),
+      );
+    store.set(
+      "nevertwice-weakness",
+      JSON.stringify([{ topic: "Algebra", subtopic: "Quadratic Equations", mistakeCount: 2, lastSeen: Date.now(), trend: "rising" }]),
+    );
+    store.set("nevertwice-sessions", JSON.stringify([{ id: "s", date: 2000, questionsAttempted: 1, correct: 0, mistakes: JSON.parse(mk(1)), durationSeconds: 60 }]));
+    const one = planDrill();
+    assert.ok(one.reason.includes("1 concept gap in"), `singular missing: ${one.reason}`);
+    assert.ok(!one.reason.includes("gaps"), `plural leaked into singular: ${one.reason}`);
+    store.set("nevertwice-sessions", JSON.stringify([{ id: "s", date: 2000, questionsAttempted: 2, correct: 0, mistakes: JSON.parse(mk(2)), durationSeconds: 60 }]));
+    const two = planDrill();
+    assert.ok(two.reason.includes("2 concept gaps in"), `plural missing: ${two.reason}`);
   });
 
   it("buildDrillQuestions delivers instantly when Groq is unreachable", async () => {
@@ -313,6 +340,28 @@ describe("statistics — 10 sessions x 20 dup-free; 200-shuffle key spread", () 
     for (let i = 0; i < 4; i++) {
       const pct = (buckets[i] / 200) * 100;
       assert.ok(pct >= 20 && pct <= 30, `position ${i}: ${pct.toFixed(1)}% outside 20-30%`);
+    }
+  });
+});
+
+describe("topic/subtopic pair atomicity — builders can never emit a mismatched pair", () => {
+  it("every fallback and Groq-slot question carries a taxonomy-valid pair", () => {
+    const valid = new Set(getAllTopics().map((t) => `${t.topic}::${t.subtopic}`));
+    for (const t of getAllTopics()) {
+      const fb = buildDrillFallback([{ topic: t.topic, subtopic: t.subtopic, errorType: "concept-gap", count: 2 }]);
+      for (const q of fb) {
+        assert.ok(valid.has(`${q.topic}::${q.subtopic}`), `fallback mismatch: ${q.topic} / ${q.subtopic}`);
+      }
+      const slots = assignToSlots(
+        [
+          { text: "G1?", options: ["A", "B", "C", "D"], correctIndex: 0 },
+          { text: "G2?", options: ["A", "B", "C", "D"], correctIndex: 1 },
+        ],
+        [{ topic: t.topic, subtopic: t.subtopic, errorType: "concept-gap", count: 2 }],
+      );
+      for (const q of slots) {
+        assert.ok(valid.has(`${q.topic}::${q.subtopic}`), `slot mismatch: ${q.topic} / ${q.subtopic}`);
+      }
     }
   });
 });

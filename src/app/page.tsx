@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Star, Zap, Crosshair, CircuitBoard, Target, Cpu, FileWarning } from "lucide-react";
+import { Star, Zap, Crosshair, CircuitBoard, Target, FileWarning } from "lucide-react";
 import { Wordmark } from "@/components/Wordmark";
 import { TraceDivider } from "@/components/TraceDivider";
 import { WeaknessHeatmap } from "@/components/WeaknessHeatmap";
 import { DossierBackdrop } from "@/components/DossierBackdrop";
 import { LandingBoard } from "@/components/LandingBoard";
+import { BoardStatusStrip, ThreatBadge } from "@/components/BoardStatus";
 
 const LEDGER = [
   { v: "200", l: "MCQs" },
@@ -40,8 +41,6 @@ const STEPS = [
 ];
 
 export default function LandingPage() {
-  const activeNets = 0;
-
   return (
     <div className="relative z-10 mx-auto w-full max-w-5xl px-4 pb-6 md:px-8">
       {/* Atmosphere: film grain + vignette */}
@@ -194,23 +193,11 @@ export default function LandingPage() {
                     You have one mission. Make every mark count.
                   </p>
                 </div>
-                <div className="flex items-center gap-2 border border-bronze bg-panel px-3 py-2" aria-label={`${activeNets} active threats`}>
-                  <span className="font-display rounded bg-blood px-2 py-0.5 text-lg text-parchment">
-                    {activeNets}
-                  </span>
-                  <span className="label">ACTIVE THREATS</span>
-                </div>
+                <ThreatBadge />
               </div>
 
-              {/* Status strip */}
-              <div className="mt-4 flex flex-col gap-2 border border-bronze/60 bg-panel p-3 font-type text-[12.5px] uppercase leading-relaxed tracking-[0.08em] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6" aria-label="Board status">
-                <p className="flex items-center gap-2 text-parchment">
-                  <Cpu className="h-4 w-4 text-amber" aria-hidden="true" />
-                  WEAKNESS BUS: <span className="font-bold text-amber">ROUTING</span>
-                </p>
-                <p className="text-faded">LAST FAULT: Quadratic Equations — misread (+1)</p>
-                <p className="text-faded">DRILL QUEUED: 12 reps · Kinematics × Calculus</p>
-              </div>
+              {/* Status strip — live weakness-bus state, never phantom data */}
+              <BoardStatusStrip />
 
               <div className="mt-4">
                 <LandingBoard />

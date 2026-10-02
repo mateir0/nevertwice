@@ -53,6 +53,14 @@ const ERROR_NOUN: Record<ErrorType, string> = {
   "silly-mistake": "silly mistakes",
 };
 
+const ERROR_NOUN_SINGULAR: Record<ErrorType, string> = {
+  "concept-gap": "concept gap",
+  misread: "misread",
+  "formula-error": "formula error",
+  "time-pressure": "time stall",
+  "silly-mistake": "silly mistake",
+};
+
 const ERROR_VERB: Record<ErrorType, string> = {
   "concept-gap": "rebuild the foundation",
   "formula-error": "force the right formula first",
@@ -126,7 +134,7 @@ function allocateCounts(sorted: Scored[], total: number): number[] {
 }
 
 function buildReason(top: Scored, total: number): string {
-  const noun = ERROR_NOUN[top.errorType];
+  const noun = top.count === 1 ? ERROR_NOUN_SINGULAR[top.errorType] : ERROR_NOUN[top.errorType];
   const verb = ERROR_VERB[top.errorType];
   const dayWord = top.spanDays === 1 ? "day" : "days";
   return `${top.node.subtopic} keeps bleeding — ${top.count} ${noun} in ${top.spanDays} ${dayWord}. ${total} questions engineered to ${verb}.`;
