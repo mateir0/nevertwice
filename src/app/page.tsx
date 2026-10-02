@@ -45,8 +45,8 @@ export default function LandingPage() {
     <div className="mx-auto w-full max-w-5xl px-4 pb-6 md:px-8">
       {/* STICKY HEADER — Victorian instrument strip */}
       <header
-        className="sticky top-0 z-[100] mx-[calc(50%-50vw)] border-y-[3px] border-brass bg-ivory px-4 py-4 md:px-8"
-        style={{ boxShadow: "0 4px 14px rgba(42,33,24,0.18)" }}
+        className="sticky top-0 z-[100] mx-[calc(50%-50vw)] border-b-[3px] border-brass bg-mahogany px-4 py-[0.9rem] md:px-8"
+        style={{ boxShadow: "0 4px 16px rgba(42,33,24,0.35)" }}
       >
         <span
           aria-hidden="true"
@@ -65,21 +65,24 @@ export default function LandingPage() {
           }}
         />
         <div className="mx-auto flex w-full max-w-5xl items-center gap-5 px-3">
-          <Link href="/" className="font-display text-xl tracking-wide text-mahogany">
+          <Link href="/" className="font-display text-xl tracking-wide text-parchment">
             NEVERTWICE
           </Link>
-          <nav aria-label="Sections" className="hidden items-center gap-5 font-display text-[17px] text-ink sm:flex">
-            <Link href="#board" className="transition-colors duration-200 hover:text-copper">
+          <nav aria-label="Sections" className="hidden items-center gap-5 font-display text-[17px] text-parchment sm:flex">
+            <Link href="#board" className="transition-colors duration-200 hover:text-brass">
               Board
             </Link>
             <span aria-hidden="true" className="text-xs text-brass">◆</span>
-            <Link href="#how" className="transition-colors duration-200 hover:text-copper">
+            <Link href="#how" className="transition-colors duration-200 hover:text-brass">
               How it works
             </Link>
           </nav>
           <div className="ml-auto flex items-center gap-4">
-            <span className="hidden font-mono text-[11px] uppercase tracking-[0.18em] text-ink/70 sm:inline">RE-PREP MODE</span>
-            <Link href="/app" className="btn-primary px-4 py-1.5 text-sm">
+            <span className="hidden font-mono text-[11px] uppercase tracking-[0.18em] text-brass sm:inline">RE-PREP MODE</span>
+            <Link
+              href="/app"
+              className="rounded border border-[#8a7a2e] bg-brass px-4 py-1.5 font-mono text-sm font-bold uppercase tracking-wider text-mahogany transition-colors duration-200 hover:bg-[#c7b84e]"
+            >
               BEGIN
             </Link>
           </div>
@@ -90,7 +93,10 @@ export default function LandingPage() {
         {/* SECTION 1 — HERO, open parchment, split two-column */}
         <section aria-label="Briefing" className="reveal relative px-1 py-10 sm:px-2">
           {/* Engraved circuit watermark — atmosphere only, text always wins */}
-          <CircuitArtwork className="pointer-events-none absolute inset-0 h-full w-full" />
+          <CircuitArtwork
+            opacity={0.16}
+            className="pointer-events-none absolute inset-0 h-full w-full"
+          />
           <div className="relative z-[1] grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-center">
             {/* LEFT — badge, headline, story, buttons */}
             <div>
@@ -146,7 +152,7 @@ export default function LandingPage() {
         {/* Faint circuit ambience carried down the remaining sections — 0.05 */}
         <div className="relative">
           <CircuitArtwork
-            opacity={0.05}
+            opacity={0.1}
             className="pointer-events-none absolute inset-0 h-full w-full"
           />
           <div className="relative z-[1] space-y-6">
