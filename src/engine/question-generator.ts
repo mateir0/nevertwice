@@ -4,9 +4,10 @@ import { nustSeedQuestions } from "@/config/exams/nust";
 /**
  * Drill question generator.
  *
- * Primary path: local Ollama (gemma3:4b) prompted for STRICT JSON.
- * Fallback path: deterministic template-built questions derived from the
- * seed bank in src/config/exams/nust.ts — the feature works with zero network.
+ * Chain: local Ollama (gemma3:4b) → Groq cloud (via the server-side
+ * /api/generate-drill route, skipped silently when unconfigured) →
+ * deterministic seed-bank fallback. Never throws; the feature works
+ * with zero network.
  */
 
 export interface DrillGenTarget {
@@ -16,7 +17,7 @@ export interface DrillGenTarget {
   count: number;
 }
 
-interface RawGenerated {
+export interface RawGenerated {
   text: string;
   options: string[];
   correctIndex: number;
@@ -38,7 +39,8 @@ const ERROR_RULES: Record<ErrorType, string> = {
     "SILLY-MISTAKE targets: precision traps. Distractors exploit sign flips, unit swaps, and off-by-one answers.",
 };
 
-function buildPrompt(targets: DrillGenTarget[]): string {
+/** Shared strict-JSON prompt — single source of truth for Ollama and Groq. */
+export function buildDrillPrompt(targets: DrillGenTarget[]): string {
   const brief = targets
     .map(
       (t) =>
@@ -57,7 +59,8 @@ function buildPrompt(targets: DrillGenTarget[]): string {
   ].join("\n");
 }
 
-function parseStrict(raw: string): RawGenerated[] {
+/** Shared strict validator — single source of truth for Ollama and Groq. */
+export function parseStrictDrillJson(raw: string): RawGenerated[] {
   const start = raw.indexOf("[");
   const end = raw.lastIndexOf("]");
   if (start === -1 || end === -1 || end <= start) throw new Error("no JSON array in response");
@@ -84,13 +87,13 @@ async function tryOllama(targets: DrillGenTarget[], timeoutMs = 25000): Promise<
     const res = await fetch(OLLAMA_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: OLLAMA_MODEL, prompt: buildPrompt(targets), stream: false, format: "json" }),
+      body: JSON.stringify({ model: OLLAMA_MODEL, prompt: buildDrillPrompt(targets), stream: false, format: "json" }),
       signal: controller.signal,
     });
     if (!res.ok) throw new Error(`ollama http ${res.status}`);
     const data = (await res.json()) as { response?: unknown };
     if (typeof data.response !== "string") throw new Error("ollama bad shape");
-    return parseStrict(data.response);
+    return parseStrictDrillJson(data.response);
   } finally {
     clearTimeout(timer);
   }
@@ -159,7 +162,7 @@ export function buildDrillFallback(targets: DrillGenTarget[]): Question[] {
 }
 
 /** Expand plan targets into per-question slots, then attach generated items to slots. */
-function assignToSlots(generated: RawGenerated[], targets: DrillGenTarget[]): Question[] {
+export function assignToSlots(generated: RawGenerated[], targets: DrillGenTarget[]): Question[] {
   const seedsBySlot: { section: string; topic: string; subtopic: string }[] = [];
   targets.forEach((t) => {
     const match =
@@ -190,21 +193,50 @@ function assignToSlots(generated: RawGenerated[], targets: DrillGenTarget[]): Qu
 }
 
 /**
- * Generate drill questions: Ollama first (one retry), deterministic
- * local fallback if Ollama is unreachable or returns invalid JSON.
+ * Middle link of the chain: Groq cloud via the server-side
+ * /api/generate-drill route. The API key lives only on the server —
+ * this client only ever sees validated question items or an HTTP error.
+ * Any failure (route down, key unset, bad JSON) throws → caller falls back.
+ */
+async function tryGroqRoute(targets: DrillGenTarget[], timeoutMs = 30000): Promise<RawGenerated[]> {
+  if (typeof window === "undefined") throw new Error("groq route is client-side only");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch("/api/generate-drill", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targets }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`drill route http ${res.status}`);
+    const data = (await res.json()) as { items?: unknown };
+    return parseStrictDrillJson(JSON.stringify(data.items));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Generate drill questions. Chain: Ollama (one retry) → Groq cloud route
+ * (skipped silently on any failure, incl. unset key) → deterministic
+ * local fallback. Never throws.
  */
 export async function generateDrillQuestions(targets: DrillGenTarget[]): Promise<Question[]> {
   const active = targets.filter((t) => t.count > 0);
   if (active.length === 0) return [];
   try {
-    const first = await tryOllama(active);
-    return assignToSlots(first, active);
-  } catch {
     try {
-      const second = await tryOllama(active);
-      return assignToSlots(second, active);
+      return assignToSlots(await tryOllama(active), active);
     } catch {
-      return buildDrillFallback(active);
+      return assignToSlots(await tryOllama(active), active);
     }
+  } catch {
+    // Ollama unreachable (e.g. Vercel) — try Groq cloud, else seed bank.
+  }
+  try {
+    return assignToSlots(await tryGroqRoute(active), active);
+  } catch {
+    return buildDrillFallback(active);
   }
 }
