@@ -4,10 +4,10 @@ import { nustSeedQuestions } from "@/config/exams/nust";
 /**
  * Drill question generator.
  *
- * Chain: local Ollama (gemma3:4b) → Groq cloud (via the server-side
- * /api/generate-drill route, skipped silently when unconfigured) →
+ * Chain: Groq cloud (via the server-side /api/generate-drill route) →
  * deterministic seed-bank fallback. Never throws; the feature works
- * with zero network.
+ * with zero network. Ollama is removed (OOM on this machine) — Groq is
+ * the ONLY model provider.
  */
 
 export interface DrillGenTarget {
@@ -23,9 +23,6 @@ export interface RawGenerated {
   correctIndex: number;
 }
 
-const OLLAMA_URL = "http://localhost:11434/api/generate";
-const OLLAMA_MODEL = "gemma3:4b";
-
 const ERROR_RULES: Record<ErrorType, string> = {
   misread:
     "MISREAD targets: write tricky wording with close distractors that differ by a single word, unit, or sign. Punish skimming.",
@@ -39,7 +36,7 @@ const ERROR_RULES: Record<ErrorType, string> = {
     "SILLY-MISTAKE targets: precision traps. Distractors exploit sign flips, unit swaps, and off-by-one answers.",
 };
 
-/** Shared strict-JSON prompt — single source of truth for Ollama and Groq. */
+/** Shared strict-JSON prompt — single source of truth for the Groq route. */
 export function buildDrillPrompt(targets: DrillGenTarget[]): string {
   const brief = targets
     .map(
@@ -59,7 +56,7 @@ export function buildDrillPrompt(targets: DrillGenTarget[]): string {
   ].join("\n");
 }
 
-/** Shared strict validator — single source of truth for Ollama and Groq. */
+/** Shared strict validator — single source of truth for the Groq route. */
 export function parseStrictDrillJson(raw: string): RawGenerated[] {
   const start = raw.indexOf("[");
   const end = raw.lastIndexOf("]");
@@ -78,25 +75,6 @@ export function parseStrictDrillJson(raw: string): RawGenerated[] {
     }
     return { text: (rec.text as string).trim(), options: (rec.options as string[]).map((o) => o.trim()), correctIndex: rec.correctIndex as number };
   });
-}
-
-async function tryOllama(targets: DrillGenTarget[], timeoutMs = 25000): Promise<RawGenerated[]> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(OLLAMA_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: OLLAMA_MODEL, prompt: buildDrillPrompt(targets), stream: false, format: "json" }),
-      signal: controller.signal,
-    });
-    if (!res.ok) throw new Error(`ollama http ${res.status}`);
-    const data = (await res.json()) as { response?: unknown };
-    if (typeof data.response !== "string") throw new Error("ollama bad shape");
-    return parseStrictDrillJson(data.response);
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 // ---------- deterministic fallback (zero network) ----------
@@ -218,22 +196,13 @@ async function tryGroqRoute(targets: DrillGenTarget[], timeoutMs = 30000): Promi
 }
 
 /**
- * Generate drill questions. Chain: Ollama (one retry) → Groq cloud route
- * (skipped silently on any failure, incl. unset key) → deterministic
- * local fallback. Never throws.
+ * Generate drill questions. Chain: Groq cloud route (one attempt; the
+ * server route itself does one retry) → deterministic local fallback on
+ * ANY failure (no key, network error, bad JSON). Never throws, never hangs.
  */
 export async function generateDrillQuestions(targets: DrillGenTarget[]): Promise<Question[]> {
   const active = targets.filter((t) => t.count > 0);
   if (active.length === 0) return [];
-  try {
-    try {
-      return assignToSlots(await tryOllama(active), active);
-    } catch {
-      return assignToSlots(await tryOllama(active), active);
-    }
-  } catch {
-    // Ollama unreachable (e.g. Vercel) — try Groq cloud, else seed bank.
-  }
   try {
     return assignToSlots(await tryGroqRoute(active), active);
   } catch {

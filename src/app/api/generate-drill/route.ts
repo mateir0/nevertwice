@@ -17,9 +17,13 @@ import {
 export const dynamic = "force-dynamic";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-// Production Llama 3.3 70B instruct ID, verified at
-// https://console.groq.com/docs/models (Supported Models table).
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+// Production flagship instruct ID, verified at
+// https://console.groq.com/docs/models (Supported Models → Production Models)
+// AND against GET /openai/v1/models for this key. Note: the docs-listed
+// "llama-3.3-70b-versatile" is enterprise-gated and returns model_not_found
+// for keys without that entitlement — gpt-oss-120b is the accessible
+// flagship here. If the key gains Llama 3.3 70B access, swap this one line.
+const GROQ_MODEL = "openai/gpt-oss-120b";
 
 const VALID_ERRORS = new Set([
   "concept-gap",
