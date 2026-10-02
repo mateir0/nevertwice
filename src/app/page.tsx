@@ -42,23 +42,28 @@ export default function LandingPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 pb-6 md:px-8">
-      {/* STICKY HEADER */}
-      <header className="sticky top-0 z-[100] -mx-4 border-b border-brass bg-parchment px-4 py-2.5 md:-mx-8 md:px-8">
-        <div className="mx-auto flex w-full max-w-5xl items-center gap-4">
+      {/* STICKY HEADER — Victorian instrument strip */}
+      <header
+        className="sticky top-0 z-[100] mx-[calc(50%-50vw)] border-y border-brass bg-ivory px-4 py-4 md:px-8"
+        style={{ boxShadow: "0 4px 14px rgba(42,33,24,0.12)" }}
+      >
+        <span aria-hidden="true" className="absolute left-2 top-1/2 inline-block h-2 w-2 -translate-y-1/2 rounded-full bg-brass" />
+        <span aria-hidden="true" className="absolute right-2 top-1/2 inline-block h-2 w-2 -translate-y-1/2 rounded-full bg-brass" />
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-5 px-3">
           <Link href="/" className="font-display text-xl tracking-wide text-mahogany">
             NEVERTWICE
           </Link>
-          <nav aria-label="Sections" className="hidden items-center gap-3 font-mono text-[13px] text-ink sm:flex">
+          <nav aria-label="Sections" className="hidden items-center gap-5 font-display text-[17px] text-ink sm:flex">
             <Link href="#board" className="transition-colors duration-200 hover:text-copper">
               Board
             </Link>
-            <span aria-hidden="true" className="text-brass">/</span>
+            <span aria-hidden="true" className="text-xs text-brass">◆</span>
             <Link href="#how" className="transition-colors duration-200 hover:text-copper">
               How it works
             </Link>
           </nav>
-          <div className="ml-auto flex items-center gap-3">
-            <span className="label hidden sm:inline">RE-PREP MODE</span>
+          <div className="ml-auto flex items-center gap-4">
+            <span className="hidden font-mono text-[11px] uppercase tracking-[0.18em] text-ink/70 sm:inline">RE-PREP MODE</span>
             <Link href="/app" className="btn-primary px-4 py-1.5 text-sm">
               BEGIN
             </Link>
