@@ -53,7 +53,7 @@ export default function ResultsPage() {
     return (
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] items-center justify-center px-4">
         <div className="text-center">
-          <p className="font-display text-3xl font-bold tracking-wide text-ink">NO SESSION DATA</p>
+          <p className="font-display text-4xl tracking-wide text-ink">NO SESSION DATA</p>
           <p className="mt-2 font-mono text-sm text-ink/70">RUN A SESSION FIRST.</p>
           <Link href="/app" className="btn-primary mt-6 inline-block">
             HOME
@@ -68,7 +68,7 @@ export default function ResultsPage() {
   return (
     <div className="mx-auto w-full max-w-[480px] px-4 py-6">
       <header className="mb-5 text-center">
-        <h1 className="font-display text-4xl font-bold tracking-wide text-ink">RESULTS</h1>
+        <h1 className="font-display text-5xl tracking-wide text-ink">RESULTS</h1>
         <p className="mt-1 font-mono text-xs tracking-widest text-ink/70">
           {new Date(session.date).toLocaleString()}
         </p>
@@ -76,16 +76,16 @@ export default function ResultsPage() {
 
       <main className="space-y-5">
         <section aria-label="Score summary" className="card reveal">
-          <h2 className="font-display text-xl font-bold tracking-wide text-ink">SESSION SUMMARY</h2>
+          <h2 className="font-display text-2xl tracking-wide text-ink">SESSION SUMMARY</h2>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {[
-              { v: `${acc}%`, l: "ACCURACY", bg: "#165B45", fg: "#FFFDF7" },
-              { v: `${session.correct}/${session.questionsAttempted}`, l: "CORRECT", bg: "#165B45", fg: "#FFFDF7" },
-              { v: `${session.mistakes.length}`, l: "MISTAKES", bg: "#B3402E", fg: "#FFFDF7" },
-              { v: formatDuration(session.durationSeconds), l: "DURATION", bg: "#B87333", fg: "#FFFDF7" },
+              { v: `${acc}%`, l: "ACCURACY", bg: "#008080", fg: "#FFFDF5" },
+              { v: `${session.correct}/${session.questionsAttempted}`, l: "CORRECT", bg: "#008080", fg: "#FFFDF5" },
+              { v: `${session.mistakes.length}`, l: "MISTAKES", bg: "#5C0000", fg: "#F5DEB3" },
+              { v: formatDuration(session.durationSeconds), l: "DURATION", bg: "#B87333", fg: "#FFFDF5" },
             ].map((s) => (
               <div key={s.l} className="copper-border bg-parchment p-3 text-center">
-                <p className="font-display inline-block rounded-md px-3 text-3xl font-bold" style={{ backgroundColor: s.bg, color: s.fg }}>
+                <p className="font-mono inline-block rounded px-3 text-3xl font-bold" style={{ backgroundColor: s.bg, color: s.fg }}>
                   {s.v}
                 </p>
                 <p className="mt-2 font-mono text-[11px] tracking-widest text-ink/70">{s.l}</p>
@@ -96,20 +96,20 @@ export default function ResultsPage() {
 
         {perSection.length > 0 && (
           <section aria-label="Per-section breakdown" className="card">
-            <h2 className="font-display text-xl font-bold tracking-wide text-ink">PER-SECTION BREAKDOWN</h2>
+            <h2 className="font-display text-2xl tracking-wide text-ink">PER-SECTION BREAKDOWN</h2>
             <ul className="mt-3 space-y-2">
               {perSection.map(([section, s]) => {
                 const pct = s.attempted > 0 ? Math.round((s.correct / s.attempted) * 100) : 0;
                 return (
                   <li key={section} className="copper-border bg-parchment p-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-display text-lg font-bold tracking-wide text-ink">{section}</span>
+                      <span className="font-display text-xl tracking-wide text-ink">{section}</span>
                       <span className="font-mono text-sm text-ink">
                         {s.correct}/{s.attempted} • {pct}%
                       </span>
                     </div>
-                    <div className="copper-border mt-2 h-2 overflow-hidden bg-vellum" aria-hidden="true">
-                      <div className="h-full bg-trace transition-all duration-300" style={{ width: `${pct}%` }} />
+                    <div className="copper-border mt-2 h-2 overflow-hidden bg-ivory" aria-hidden="true">
+                      <div className="h-full bg-teal transition-all duration-300" style={{ width: `${pct}%` }} />
                     </div>
                   </li>
                 );
@@ -119,12 +119,12 @@ export default function ResultsPage() {
         )}
 
         <section aria-label="Mistakes" className="card">
-          <h2 className="font-display text-xl font-bold tracking-wide text-ink">
-            MISTAKES <span className="rounded bg-brick px-2 py-0.5 text-vellum">({session.mistakes.length})</span>
+          <h2 className="font-display text-2xl tracking-wide text-ink">
+            MISTAKES <span className="rounded bg-mahogany px-2 py-0.5 font-mono text-base font-bold text-parchment">({session.mistakes.length})</span>
           </h2>
           {session.mistakes.length === 0 ? (
-            <p className="mt-2 font-mono text-sm text-ink">
-              <span className="rounded bg-trace px-2 py-0.5 text-vellum">CLEAN</span> NOTHING TO CLASSIFY.
+            <p className="mt-2 font-display text-[17px] text-ink">
+              <span className="rounded bg-teal px-2 py-0.5 font-mono text-sm font-bold text-ivory">CLEAN</span> NOTHING TO CLASSIFY.
             </p>
           ) : (
             <ul className="mt-3 space-y-2">
@@ -139,7 +139,7 @@ export default function ResultsPage() {
                       aria-label={`Error type for ${m.questionId}`}
                       value={m.errorType}
                       onChange={(e) => reclassify(m.id, e.target.value as ErrorType)}
-                      className="input-field w-auto px-2 py-1 font-display text-sm"
+                      className="input-field w-auto px-2 py-1 font-mono text-sm"
                     >
                       {ERROR_TYPES.map((t) => (
                         <option key={t.value} value={t.value}>
@@ -148,7 +148,7 @@ export default function ResultsPage() {
                       ))}
                     </select>
                   </div>
-                  <p className="font-display mt-1 text-sm font-bold tracking-wide text-copper">
+                  <p className="mt-1 font-mono text-sm font-bold tracking-wide text-mahogany">
                     {errorLabel(m.errorType)}
                   </p>
                 </li>

@@ -59,7 +59,7 @@ export default function SessionPage() {
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] items-center justify-center px-4">
         <div className="text-center">
           <PacingRing secondsRemaining={TOTAL_SECONDS} totalSeconds={TOTAL_SECONDS} size={96} />
-          <p className="mt-4 font-mono text-sm text-ink/70">LOADING DRILLS…</p>
+          <p className="mt-4 font-display text-[17px] text-ink/80">LOADING DRILLS…</p>
         </div>
       </div>
     );
@@ -137,7 +137,7 @@ export default function SessionPage() {
     <div className="mx-auto w-full max-w-[480px] px-4 py-4">
       <header className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <p className="font-display text-xl font-bold tracking-wide text-ink">NET SESSION</p>
+          <p className="font-display text-2xl tracking-wide text-ink">NET SESSION</p>
           <p className="font-mono text-xs tracking-widest text-ink/70" aria-live="polite">
             Q {index + 1}/{total}
           </p>
@@ -145,9 +145,9 @@ export default function SessionPage() {
         <PacingRing secondsRemaining={secondsLeft} totalSeconds={TOTAL_SECONDS} size={64} strokeWidth={5} />
       </header>
 
-      <div className="copper-border mb-4 h-2 overflow-hidden bg-vellum" aria-hidden="true">
+      <div className="copper-border mb-4 h-2 overflow-hidden bg-ivory" aria-hidden="true">
         <div
-          className="h-full bg-accent transition-all duration-300"
+          className="h-full bg-brass transition-all duration-300"
           style={{ width: `${((index + 1) / Math.max(total, 1)) * 100}%` }}
         />
       </div>
@@ -155,13 +155,13 @@ export default function SessionPage() {
       <main>
         <article aria-label={`Question ${index + 1} of ${total}`} className="card">
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="font-display text-lg font-bold tracking-wide text-copper">{question.section}</span>
+            <span className="font-display text-xl tracking-wide text-mahogany">{question.section}</span>
             <span className="copper-border bg-parchment px-2 py-1 font-mono text-[11px] text-ink/70">
               {question.topic} / {question.subtopic}
             </span>
           </div>
 
-          <p className="mb-5 font-mono text-base leading-relaxed text-ink">{question.text}</p>
+          <p className="mb-5 font-display text-[17px] leading-relaxed text-ink">{question.text}</p>
 
           <div className="grid grid-cols-1 gap-3" role="radiogroup" aria-label="Answer options">
             {question.options.map((opt, i) => {
@@ -176,21 +176,21 @@ export default function SessionPage() {
                   aria-checked={picked}
                   disabled={isAnswered}
                   onClick={() => choose(i)}
-                  className="copper-border flex min-h-[56px] items-center gap-3 bg-parchment p-4 text-left font-mono text-sm text-ink transition-all duration-200 disabled:cursor-default"
+                  className="copper-border flex min-h-[56px] items-center gap-3 bg-parchment p-4 text-left font-display text-[16px] text-ink transition-all duration-200 disabled:cursor-default"
                   style={{
-                    borderColor: revealed ? "#165B45" : wrongPick ? "#B3402E" : undefined,
+                    borderColor: revealed ? "#008080" : wrongPick ? "#5C0000" : undefined,
                     borderWidth: revealed || wrongPick ? "2px" : undefined,
                     backgroundColor: revealed
-                      ? "rgba(22,91,69,0.12)"
+                      ? "rgba(0,128,128,0.1)"
                       : wrongPick
-                        ? "rgba(179,64,46,0.1)"
+                        ? "rgba(92,0,0,0.08)"
                         : undefined,
                   }}
                 >
-                  <span className="font-display text-lg font-bold">{letter}.</span>
+                  <span className="font-mono text-base font-bold">{letter}.</span>
                   <span className="flex-1">{opt}</span>
-                  {revealed && <span className="rounded bg-trace px-1.5 font-display text-vellum">✓</span>}
-                  {wrongPick && <span className="rounded bg-brick px-1.5 font-display text-vellum">✗</span>}
+                  {revealed && <span className="rounded bg-teal px-1.5 font-mono text-ivory">✓</span>}
+                  {wrongPick && <span className="rounded bg-mahogany px-1.5 font-mono text-parchment">✗</span>}
                 </button>
               );
             })}
@@ -198,8 +198,8 @@ export default function SessionPage() {
 
           {isWrong && (
             <div className="mt-5 border-t border-copper pt-4" role="group" aria-label="Classify the error">
-              <p className="font-display text-lg font-bold tracking-wide text-ink">
-                <span className="rounded bg-brick px-2 py-0.5 text-vellum">WRONG</span> — WHAT HAPPENED?
+              <p className="font-display text-xl tracking-wide text-ink">
+                <span className="rounded bg-mahogany px-2 py-0.5 font-mono text-sm font-bold text-parchment">WRONG</span> — WHAT HAPPENED?
               </p>
               <p className="mb-3 font-mono text-xs text-ink/70">
                 TAP ONE. REQUIRED BEFORE ADVANCING.
@@ -215,12 +215,12 @@ export default function SessionPage() {
                       className="chip text-left"
                       style={
                         active
-                          ? { borderColor: "#B87333", borderWidth: "2px", color: "#3A2E22", backgroundColor: "rgba(184,115,51,0.12)" }
+                          ? { borderColor: "#5C0000", borderWidth: "2px", backgroundColor: "rgba(92,0,0,0.07)" }
                           : undefined
                       }
                     >
-                      <span className="block text-base">{t.label}</span>
-                      <span className="block font-mono text-xs normal-case tracking-normal text-ink/70">
+                      <span className="block font-mono text-base font-bold">{t.label}</span>
+                      <span className="block font-display text-[15px] normal-case tracking-normal text-ink/80">
                         {t.description}
                       </span>
                     </button>
@@ -231,8 +231,8 @@ export default function SessionPage() {
           )}
 
           {isCorrect && (
-            <p className="font-display mt-5 border-t border-copper pt-4 text-lg font-bold tracking-wide text-ink">
-              <span className="rounded bg-trace px-2 py-0.5 text-vellum">CORRECT</span> — LOCKED IN.
+            <p className="font-display mt-5 border-t border-copper pt-4 text-xl tracking-wide text-ink">
+              <span className="rounded bg-teal px-2 py-0.5 font-mono text-sm font-bold text-ivory">CORRECT</span> — LOCKED IN.
             </p>
           )}
 
@@ -259,7 +259,7 @@ export default function SessionPage() {
             )}
           </div>
           {isAnswered && !canAdvance && (
-            <p className="mt-2 text-right font-mono text-[11px] font-bold text-copper">
+            <p className="mt-2 text-right font-mono text-[11px] font-bold text-mahogany">
               CLASSIFY THE ERROR TO CONTINUE
             </p>
           )}

@@ -14,20 +14,20 @@ function formatDate(ts: number): string {
 }
 
 function accStyle(acc: number): { backgroundColor: string; color: string } {
-  if (acc >= 70) return { backgroundColor: "#165B45", color: "#FFFDF7" };
-  if (acc >= 40) return { backgroundColor: "#B87333", color: "#FFFDF7" };
-  return { backgroundColor: "#B3402E", color: "#FFFDF7" };
+  if (acc >= 70) return { backgroundColor: "#008080", color: "#FFFDF5" };
+  if (acc >= 40) return { backgroundColor: "#B87333", color: "#FFFDF5" };
+  return { backgroundColor: "#5C0000", color: "#F5DEB3" };
 }
 
 export function RecentSessions({ sessions }: { sessions: Session[] }) {
   if (sessions.length === 0) {
     return (
       <section aria-label="Recent sessions" className="card">
-        <h2 className="font-display flex items-center gap-2 text-xl font-bold tracking-wide text-ink">
+        <h2 className="font-display flex items-center gap-2 text-2xl tracking-wide text-ink">
           <History className="h-5 w-5 text-copper" aria-hidden="true" />
           RECENT SESSIONS
         </h2>
-        <p className="mt-2 font-mono text-sm text-ink/70">
+        <p className="mt-2 font-display text-[17px] text-ink/80">
           NO SESSIONS YET — HIT BEGIN ABOVE.
         </p>
       </section>
@@ -36,7 +36,7 @@ export function RecentSessions({ sessions }: { sessions: Session[] }) {
 
   return (
     <section aria-label="Recent sessions" className="card">
-      <h2 className="font-display flex items-center gap-2 text-xl font-bold tracking-wide text-ink">
+      <h2 className="font-display flex items-center gap-2 text-2xl tracking-wide text-ink">
         <History className="h-5 w-5 text-copper" aria-hidden="true" />
         RECENT SESSIONS
       </h2>
@@ -56,7 +56,7 @@ export function RecentSessions({ sessions }: { sessions: Session[] }) {
                 </p>
               </div>
               <span
-                className="font-display rounded-md px-2 py-1 text-lg font-bold"
+                className="font-mono rounded px-2 py-1 text-lg font-bold"
                 style={badge}
               >
                 {acc}%

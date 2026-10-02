@@ -1,24 +1,24 @@
 @import "tailwindcss";
 
 @theme {
-  /* ---- PCB Schematic Architecture — Warm Light palette (DESIGN.md, exact) ---- */
-  --color-parchment: #F7F1E3;
-  --color-vellum: #FFFDF7;
-  --color-ink: #3A2E22;
-  --color-accent: #D98C53;
-  --color-accent-dark: #C07640;
+  /* ---- Steampunk Circuitry palette (DESIGN.md, exact) ---- */
+  --color-parchment: #F5DEB3;
+  --color-ivory: #FFFDF5;
+  --color-mahogany: #5C0000;
+  --color-mahogany-deep: #420000;
+  --color-brass: #B5A642;
   --color-copper: #B87333;
-  --color-silver: #C0C0C0;
-  --color-gold: #FFD700;
-  --color-trace: #165B45;
-  --color-brick: #B3402E;
+  --color-teal: #008080;
+  --color-ink: #2A2118;
+  --color-brick: #8A3B1F;
 
-  --font-display: "Courier New", Courier, monospace;
-  --font-mono: "Courier New", Courier, monospace;
+  --font-display: var(--font-fell), "IM Fell English", Georgia, "Times New Roman", serif;
+  --font-label: var(--font-fellsc), "IM Fell English SC", Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-jbmono), "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
 }
 
 @keyframes board-rise {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -27,11 +27,16 @@
   50% { opacity: 0.35; }
 }
 
-/* ---- Warm Light custom utilities (no gradients anywhere) ---- */
+/* ---- Steampunk Circuitry custom utilities ---- */
+
+@utility brass-frame {
+  border: 1px solid var(--color-brass);
+  border-radius: 4px;
+}
 
 @utility copper-border {
   border: 1px solid var(--color-copper);
-  border-radius: 0.5rem;
+  border-radius: 4px;
 }
 
 @utility trace-divider-line {
@@ -41,7 +46,7 @@
 }
 
 @utility reveal {
-  animation: board-rise 420ms ease-out both;
+  animation: board-rise 500ms ease-out both;
 }
 
 @utility via-live {
@@ -52,125 +57,148 @@
   html {
     background-color: var(--color-parchment);
     color: var(--color-ink);
-    font-family: var(--font-mono);
-    font-size: 16px;
-    line-height: 1.6;
+    font-family: var(--font-display);
+    font-size: 17px;
+    line-height: 1.7;
   }
 
   body {
     min-height: 100dvh;
     background-color: var(--color-parchment);
     color: var(--color-ink);
-    font-family: var(--font-mono);
-    font-size: 1rem;
-    line-height: 1.6;
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    line-height: 1.7;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    font-weight: 400;
+    letter-spacing: 0.01em;
     color: var(--color-ink);
   }
 
   ::selection {
-    background-color: var(--color-gold);
+    background-color: var(--color-brass);
     color: var(--color-ink);
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply px-6 py-3 font-bold uppercase tracking-wider transition-all duration-200;
-    font-family: var(--font-display);
-    background-color: var(--color-accent);
-    color: var(--color-vellum);
-    border: 1.5px solid var(--color-accent);
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 12px rgba(58, 46, 34, 0.08);
+    @apply px-6 py-3 uppercase tracking-wider transition-all duration-200;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    background-color: var(--color-mahogany);
+    color: var(--color-parchment);
+    border: 1px solid var(--color-mahogany);
+    border-radius: 4px;
+    box-shadow:
+      inset 0 0 0 1px var(--color-brass),
+      inset 0 1px 0 rgba(181, 166, 66, 0.35),
+      0 2px 10px rgba(42, 33, 24, 0.12);
   }
   .btn-primary:hover {
-    background-color: var(--color-accent-dark);
-    border-color: var(--color-accent-dark);
-    box-shadow: 0 4px 16px rgba(58, 46, 34, 0.12);
+    background-color: var(--color-mahogany-deep);
+    box-shadow:
+      inset 0 0 0 1px var(--color-brass),
+      inset 0 1px 0 rgba(181, 166, 66, 0.35),
+      0 4px 14px rgba(42, 33, 24, 0.16);
+    transform: translateY(-1px);
   }
   .btn-primary:active {
     transform: translateY(1px);
-    box-shadow: none;
+    box-shadow: inset 0 0 0 1px var(--color-brass);
   }
 
   .btn-secondary {
-    @apply px-6 py-3 font-bold uppercase tracking-wider transition-all duration-200;
-    font-family: var(--font-display);
+    @apply px-6 py-3 uppercase tracking-wider transition-all duration-200;
+    font-family: var(--font-mono);
+    font-weight: 700;
     background-color: transparent;
-    border: 1.5px solid var(--color-copper);
-    color: var(--color-ink);
-    border-radius: 0.5rem;
+    border: 1.5px solid var(--color-brass);
+    color: var(--color-mahogany);
+    border-radius: 4px;
   }
   .btn-secondary:hover {
-    background-color: rgba(184, 115, 51, 0.1);
-    border-color: var(--color-copper);
+    background-color: rgba(92, 0, 0, 0.06);
   }
   .btn-secondary:active {
     transform: translateY(1px);
   }
 
   .btn-danger {
-    @apply px-6 py-3 font-bold uppercase tracking-wider transition-all duration-200;
-    font-family: var(--font-display);
+    @apply px-6 py-3 uppercase tracking-wider transition-all duration-200;
+    font-family: var(--font-mono);
+    font-weight: 700;
     background-color: transparent;
     border: 1.5px solid var(--color-brick);
     color: var(--color-ink);
-    border-radius: 0.5rem;
+    border-radius: 4px;
   }
   .btn-danger:hover {
-    background-color: rgba(179, 64, 46, 0.08);
+    background-color: rgba(138, 59, 31, 0.08);
   }
   .btn-danger:active {
     transform: translateY(1px);
   }
 
+  /* Riveted instrument plate: ivory, brass frame, 4 corner rivets */
   .card {
-    background-color: var(--color-vellum);
-    border: 1px solid var(--color-copper);
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 12px rgba(58, 46, 34, 0.08);
+    background-color: var(--color-ivory);
+    background-image:
+      radial-gradient(circle, var(--color-brass) 2.2px, transparent 2.8px),
+      radial-gradient(circle, var(--color-brass) 2.2px, transparent 2.8px),
+      radial-gradient(circle, var(--color-brass) 2.2px, transparent 2.8px),
+      radial-gradient(circle, var(--color-brass) 2.2px, transparent 2.8px);
+    background-repeat: no-repeat;
+    background-position:
+      7px 7px,
+      calc(100% - 7px) 7px,
+      7px calc(100% - 7px),
+      calc(100% - 7px) calc(100% - 7px);
+    border: 1px solid var(--color-brass);
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(42, 33, 24, 0.1);
     @apply p-4;
   }
 
   .input-field {
     @apply w-full px-4 py-3;
     font-family: var(--font-mono);
-    background-color: var(--color-vellum);
+    background-color: var(--color-ivory);
     border: 1px solid var(--color-copper);
-    border-radius: 0.5rem;
+    border-radius: 4px;
     color: var(--color-ink);
   }
   .input-field:focus {
     outline: none;
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 2px var(--color-accent);
+    border-color: var(--color-mahogany);
+    box-shadow: 0 0 0 2px var(--color-mahogany);
   }
 
+  /* Small brass-outlined plates (error classification) */
   .chip {
     @apply px-4 py-3 uppercase tracking-wider transition-all duration-200 min-h-[56px];
-    font-family: var(--font-display);
+    font-family: var(--font-mono);
     font-weight: 700;
-    background-color: transparent;
-    border: 1.5px solid var(--color-copper);
-    border-radius: 0.5rem;
+    background-color: var(--color-ivory);
+    border: 1.5px solid var(--color-brass);
+    border-radius: 4px;
     color: var(--color-ink);
+    box-shadow: 0 1px 6px rgba(42, 33, 24, 0.08);
   }
   .chip:hover {
-    border-color: var(--color-accent);
-    background-color: rgba(217, 140, 83, 0.1);
+    border-color: var(--color-copper);
+    background-color: rgba(184, 115, 51, 0.08);
   }
 
+  /* Engraved small-caps label */
   .label {
-    font-family: var(--font-mono);
+    font-family: var(--font-label);
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 400;
     letter-spacing: 0.08em;
-    color: var(--color-copper);
+    color: var(--color-ink);
   }
 }
