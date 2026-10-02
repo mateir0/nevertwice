@@ -230,15 +230,14 @@ export default function SessionPage() {
                       key={t.value}
                       onClick={() => classify(t.value)}
                       aria-pressed={active}
-                      className="chip text-left"
-                      style={
-                        active
-                          ? { borderColor: "#B3202C", borderWidth: "2px", backgroundColor: "rgba(179,32,44,0.07)" }
-                          : undefined
-                      }
+                      className={`chip text-left${active ? " chip-active" : ""}`}
                     >
-                      <span className="block font-type text-base font-bold">{t.label}</span>
-                      <span className="block font-display text-[15px] normal-case tracking-normal text-parchment/80">
+                      <span
+                        className={`block font-type text-[15px] font-bold uppercase tracking-[0.12em] ${active ? "text-amber" : "text-parchment"}`}
+                      >
+                        {t.label}
+                      </span>
+                      <span className="block font-type text-[15px] font-normal normal-case leading-relaxed tracking-normal text-parchment">
                         {t.description}
                       </span>
                     </button>
