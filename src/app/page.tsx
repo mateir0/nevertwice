@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CircuitBoard, Cpu, Crosshair, Target, Zap } from "lucide-react";
+import { SolidBackdrop } from "@/components/SolidBackdrop";
 import { Wordmark } from "@/components/Wordmark";
 import { TraceDivider } from "@/components/TraceDivider";
 import { WeaknessHeatmap } from "@/components/WeaknessHeatmap";
@@ -42,6 +43,7 @@ export default function LandingPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 pb-6 md:px-8">
+      <SolidBackdrop />
       {/* STICKY HEADER */}
       <header className="sticky top-0 z-[100] -mx-4 border-b border-copper bg-pcb px-4 py-2.5 md:-mx-8 md:px-8">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-4">
@@ -67,47 +69,62 @@ export default function LandingPage() {
       </header>
 
       <main className="space-y-6 pt-6">
-        {/* SECTION 1 — HERO, centered single column */}
-        <section aria-label="Briefing" className="card reveal px-4 py-10 text-center sm:px-8">
-          <p className="label text-accent">RE-PREPARATION PROTOCOL</p>
-          <div aria-hidden="true" className="mx-auto mt-2 h-px w-24 bg-copper" />
-          <div className="mt-4 flex justify-center">
-            <Wordmark align="center" size="clamp(3rem, 8vw, 5.5rem)" />
-          </div>
-          <p className="mx-auto mt-5 max-w-[52ch] font-mono text-[15px] leading-relaxed text-cream">
-            My brother missed NUST. I built him the thing that makes sure he never loses the same mark twice.
-          </p>
-          <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href="/app" className="btn-primary flex items-center justify-center gap-2 text-xl sm:min-w-[220px]">
-              <Zap className="h-5 w-5" aria-hidden="true" />
-              BEGIN
-            </Link>
-            <Link href="/app" className="font-mono text-sm text-cream-dim underline transition-colors duration-200 hover:text-accent">
-              Open app →
-            </Link>
-          </div>
-          <p className="mt-3">
-            <Link href="#how" className="font-mono text-xs text-cream-dim underline transition-colors duration-200 hover:text-accent">
-              How it works
-            </Link>
-          </p>
-
-          <p className="label mt-10 text-accent">MISSION LEDGER</p>
-          <div aria-hidden="true" className="mx-auto mt-2 h-px w-24 bg-copper" />
-          <dl className="mx-auto mt-4 grid max-w-2xl grid-cols-3 gap-2" aria-label="NET format ledger">
-            {LEDGER.map((s) => (
-              <div key={s.l} className="copper-border bg-pcb-panel px-2 py-3 text-center">
-                <dt className="sr-only">{s.l}</dt>
-                <dd className="font-display text-2xl font-bold text-gold sm:text-3xl">{s.v}</dd>
-                <dd className="label mt-0.5 text-[10px]">{s.l}</dd>
+        {/* SECTION 1 — HERO, split two-column */}
+        <section aria-label="Briefing" className="card reveal px-4 py-10 sm:px-8">
+          <div className="grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:items-center">
+            {/* LEFT — info stack */}
+            <div>
+              <p className="label text-accent">RE-PREPARATION PROTOCOL</p>
+              <p className="mt-4 max-w-[52ch] border-l-2 border-copper pl-4 font-mono text-[15px] leading-relaxed text-cream">
+                My brother missed NUST. I built him the thing that makes sure he never loses the same mark twice.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <Link href="/app" className="btn-primary flex items-center justify-center gap-2 text-xl sm:min-w-[200px]">
+                  <Zap className="h-5 w-5" aria-hidden="true" />
+                  BEGIN
+                </Link>
+                <Link href="/app" className="btn-secondary flex items-center justify-center gap-2 text-xl sm:min-w-[200px]">
+                  Open app →
+                </Link>
+                <Link href="#how" className="font-mono text-sm text-cream-dim underline transition-colors duration-200 hover:text-accent sm:ml-1">
+                  How it works
+                </Link>
               </div>
-            ))}
-          </dl>
-          <p className="mt-4">
-            <Link href="#board" className="font-mono text-sm text-cream-dim underline transition-colors duration-200 hover:text-accent">
-              View the board
-            </Link>
-          </p>
+              <p className="label mt-8 text-accent">MISSION LEDGER</p>
+              <dl className="mt-3 grid grid-cols-3 gap-2" aria-label="NET format ledger">
+                {LEDGER.map((s) => (
+                  <div key={s.l} className="copper-border bg-pcb-panel px-2 py-3 text-center">
+                    <dt className="sr-only">{s.l}</dt>
+                    <dd className="font-display text-2xl font-bold text-gold">{s.v}</dd>
+                    <dd className="label mt-0.5 text-[10px]">{s.l}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+            {/* RIGHT — visual anchor */}
+            <div>
+              <Wordmark align="center" size="clamp(3rem, 7vw, 5rem)" />
+              <div className="copper-border mt-5 bg-pcb-panel p-4 font-mono text-[13px] leading-relaxed lg:rotate-[1.2deg]">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="font-display flex items-center gap-2 text-sm font-bold tracking-wide text-accent">
+                    <Cpu className="h-4 w-4" aria-hidden="true" />
+                    SCHEMATIC // REV A
+                  </span>
+                  <span className="flex gap-1.5" aria-hidden="true">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full border border-copper" />
+                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-copper" />
+                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-gold" />
+                  </span>
+                </div>
+                <p className="text-cream">WEAKNESS BUS: <span className="text-gold">ROUTING</span></p>
+                <p className="text-cream-dim">LAST FAULT: Quadratic Equations — misread (+1)</p>
+                <p className="text-cream-dim">DRILL QUEUED: 12 reps • Kinematics × Calculus</p>
+                <p className="mt-3 border-t border-copper pt-2 text-[12px] text-cream-dim">
+                  Top 3 leaking nets get re-routed on repeat until the board tests green.
+                </p>
+              </div>
+            </div>
+          </div>
         </section>
 
         <TraceDivider />
