@@ -1,5 +1,5 @@
 import { ExamEngine } from "./exam-engine";
-import { buildDrillFallback, type DrillGenTarget } from "./question-generator";
+import { buildDrillFallback, shuffleOptions, type DrillGenTarget } from "./question-generator";
 import type { ErrorType, Question, WeaknessNode } from "@/types";
 
 /**
@@ -9,6 +9,11 @@ import type { ErrorType, Question, WeaknessNode } from "@/types";
  * and builds a 5–8 question drill weighted toward the hottest nodes.
  * Synchronous and offline: question text comes from the deterministic
  * local fallback so the loop never needs the network.
+ *
+ * Every drill's question set is fully assembled (including an unbiased
+ * Fisher-Yates option shuffle via shuffleOptions) BEFORE it is stored as
+ * the active drill, so loadActiveDrill() can hand out pre-shuffled,
+ * deduped questions without any further processing.
  */
 
 export interface DrillTarget {
@@ -144,7 +149,7 @@ export function planDrill(now: number = Date.now()): DrillPlan | null {
     errorType: s.errorType,
     count: counts[i],
   }));
-  const questions = buildDrillFallback(genTargets);
+  const questions = buildDrillFallback(genTargets).map(shuffleOptions);
 
   return {
     id: `drill-${now}`,

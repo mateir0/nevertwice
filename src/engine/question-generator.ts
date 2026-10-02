@@ -3,6 +3,37 @@ import { nustSeedQuestions } from "@/config/exams/nust";
 import { sanitizeStem } from "@/engine/format-math";
 
 /**
+ * Deterministic Fisher-Yates shuffle of a question's options array,
+ * remapping correctIndex to follow the correct answer.
+ *
+ * Biased sort-based shuffles (Array.sort(() => Math.random() - 0.5))
+ * are forbidden project-wide for option shuffling — this is the only
+ * approved path. Applied to EVERY question at session/drill assembly
+ * time, both the seed-bank session path and the drill path.
+ */
+export function shuffleOptions(question: Question): Question {
+  const options = [...question.options];
+  let j: number;
+  let temp: string;
+  for (let i = options.length - 1; i > 0; i--) {
+    j = Math.floor(Math.random() * (i + 1));
+    temp = options[i];
+    options[i] = options[j];
+    options[j] = temp;
+  }
+  const correctIndex = options.indexOf(question.options[question.correctIndex]);
+  return { ...question, options, correctIndex };
+}
+
+/**
+ * Normalize a question text for dedup comparison: lowercase + collapse
+ * all whitespace runs to a single space, trim.
+ */
+export function normalizeText(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+/**
  * Drill question generator.
  *
  * Chain: Groq cloud (via the server-side /api/generate-drill route) →
@@ -10,7 +41,6 @@ import { sanitizeStem } from "@/engine/format-math";
  * with zero network. Ollama is removed (OOM on this machine) — Groq is
  * the ONLY model provider.
  */
-
 export interface DrillGenTarget {
   topic: string;
   subtopic: string;
@@ -115,36 +145,155 @@ function stripSeedPrefix(text: string): string {
 
 /**
  * Template-built drill questions derived from the seed bank.
- * Deterministic: same targets always yield the same set.
- * Generated questions get isPlaceholder: false and "drill-" ids.
+ *
+ * Dedup rules (zero-network fallback):
+ *  - Track emitted question TEXTS (normalized: lowercase, whitespace
+ *    collapsed) for the duration of this single drill build.
+ *  - Never emit the same normalized text twice within one drill.
+ *  - Before any text reuse, vary the numbers/values inside the template
+ *    so the emitted text is materially different.
+ *  - After dedup/wear, apply shuffleOptions() so option order is unbiased
+ *    and correctIndex stays correct.
+ *
+ * Same targets always yield the same set (deterministic multipliers),
+ * but no text repeats within a drill.
  */
 export function buildDrillFallback(targets: DrillGenTarget[]): Question[] {
   const out: Question[] = [];
+  const emitted = new Set<string>();
+
   targets.forEach((t, ti) => {
     const sameSub = nustSeedQuestions.filter((q) => q.topic === t.topic && q.subtopic === t.subtopic);
     const sameTopic = nustSeedQuestions.filter((q) => q.topic === t.topic);
     const pool = sameSub.length > 0 ? sameSub : sameTopic.length > 0 ? sameTopic : nustSeedQuestions;
+
     for (let k = 0; k < Math.max(0, t.count); k++) {
-      const base = pool[(k + ti) % pool.length];
-      // Stem only — no "Drill · {subtopic} —" meta-prefix. Topic metadata
-      // lives in the topic/subtopic fields and the tag pill, not the text.
+      // Walk the pool cyclically, skipping any seed whose current
+      // emitted text already exists in this drill.
+      const base = pickDedupedSeed(pool, emitted, t, k, ti);
       const stem = sanitizeStem(stripSeedPrefix(base.text));
-      const rng = mulberry32(hashString(`${t.topic}::${t.subtopic}::${k}`));
-      const order = [0, 1, 2, 3].sort(() => rng() - 0.5);
-      const options = order.map((oi) => base.options[oi]);
-      out.push({
-        id: `drill-${slug(t.subtopic)}-${ti}-${k + 1}`,
-        section: base.section,
-        topic: t.topic,
-        subtopic: t.subtopic,
-        text: stem,
-        options,
-        correctIndex: order.indexOf(base.correctIndex),
-        isPlaceholder: false,
-      });
+      const text = varyStem(stem, t.topic, t.subtopic, k, ti);
+
+      // Safety valve: if every pool entry would repeat, perturb the
+      // last candidate's numbers instead of emitting a duplicate.
+      const normalized = normalizeText(text);
+      if (emitted.has(normalized)) {
+        const last = pool[(k + ti) % pool.length];
+        const perturbedStem = perturbStem(stripSeedPrefix(last.text), k, ti);
+        out.push(
+          shuffleOptions({
+            id: `drill-${slug(t.subtopic)}-${ti}-${k + 1}`,
+            section: last.section,
+            topic: t.topic,
+            subtopic: t.subtopic,
+            text: sanitizeStem(perturbedStem),
+            options: [...last.options],
+            correctIndex: last.correctIndex,
+            isPlaceholder: false,
+          }),
+        );
+        emitted.add(normalizeText(perturbedStem));
+        continue;
+      }
+
+      emitted.add(normalized);
+      out.push(
+        shuffleOptions({
+          id: `drill-${slug(t.subtopic)}-${ti}-${k + 1}`,
+          section: base.section,
+          topic: t.topic,
+          subtopic: t.subtopic,
+          text,
+          options: [...base.options],
+          correctIndex: base.correctIndex,
+          isPlaceholder: false,
+        }),
+      );
     }
   });
   return out;
+}
+
+/**
+ * Pick the next seed that would not emit a duplicate normalized text
+ * given the current varyStem transform. Walk the pool cyclically.
+ */
+function pickDedupedSeed(
+  pool: typeof nustSeedQuestions,
+  emitted: Set<string>,
+  t: DrillGenTarget,
+  k: number,
+  ti: number,
+): typeof nustSeedQuestions[number] {
+  const start = (k + ti) % pool.length;
+  for (let offset = 0; offset < pool.length; offset++) {
+    const candidate = pool[(start + offset) % pool.length];
+    const stem = sanitizeStem(stripSeedPrefix(candidate.text));
+    const text = varyStem(stem, t.topic, t.subtopic, k, ti);
+    if (!emitted.has(normalizeText(text))) return candidate;
+  }
+  // Pool fully fragmented for this slot — fall back to the first entry;
+  // the caller's safety valve will perturb it.
+  return pool[start];
+}
+
+/**
+ * Deterministically vary the numbers/values inside a seed stem so the
+ * same template can be reused with materially different text BEFORE any
+ * text-level repeat occurs.
+ *
+ * Uses a deterministic multiplier derived from the target + slot, so
+ * the same targets always yield the same questions — but consecutive
+ * slots on the same subtopic get different numbers.
+ */
+function varyStem(stem: string, topic: string, subtopic: string, k: number, ti: number): string {
+  const seed = hashString(`${topic}::${subtopic}::${k}::${ti}`);
+  const rng = mulberry32(seed);
+
+  // Deterministic digit replacer: picks digits/integer tokens in the stem
+  // and replaces them with a different deterministic value, capped to a
+  // sensible exam range so the question is still solvable.
+  return stem.replace(/-?\d+(\.\d+)?/g, (m) => {
+    const base = parseFloat(m);
+    if (!Number.isFinite(base)) return m;
+    const r = rng();
+    // Shift by 1–4 in either direction, keeping magnitudes sane.
+    const shift = Math.floor(r * 4) + 1;
+    const sign = r < 0.5 ? -1 : 1;
+    let next = base + sign * shift;
+    if (Number.isInteger(base)) {
+      next = Math.round(next);
+    } else {
+      next = Math.round(next * 10) / 10;
+    }
+    // Keep exam-friendly magnitudes: no zero/negative where a positive
+    // magnitude is expected, no absurdly large values.
+    if (next <= 0) next = Math.abs(next) || 1;
+    if (next > 9999) next = base;
+    return String(next);
+  });
+}
+
+/**
+ * Heavier perturbation when the normal varyStem path would still collide:
+ * reroll the inner digits with a different seed offset so the text differs.
+ */
+function perturbStem(stem: string, k: number, ti: number): string {
+  const seed = hashString(`perturb::${k}::${ti}`);
+  const rng = mulberry32(seed);
+  return stem.replace(/-?\d+(\.\d+)?/g, (m) => {
+    const base = parseFloat(m);
+    if (!Number.isFinite(base)) return m;
+    const r = rng();
+    const shift = Math.floor(r * 6) + 2;
+    const sign = r < 0.5 ? -1 : 1;
+    let next = base + sign * shift;
+    if (Number.isInteger(base)) next = Math.round(next);
+    else next = Math.round(next * 10) / 10;
+    if (next <= 0) next = Math.abs(next) || 2;
+    if (next > 9999) next = base;
+    return String(next);
+  });
 }
 
 /** Expand plan targets into per-question slots, then attach generated items to slots. */

@@ -1,4 +1,5 @@
 import type { ExamConfig, Question } from "@/types";
+import { shuffleOptions } from "@/engine/question-generator";
 
 /**
  * NUST Entry Test (NET) — exam-specific knowledge lives ONLY here.
@@ -107,11 +108,18 @@ export const nustSeedQuestions: Question[] = SEEDS.map((s, i) => ({
 
 export function getQuestionsForSession(count = 20): Question[] {
   const pool = [...nustSeedQuestions];
+  // Fisher-Yates shuffle the bank, then take the first n. Never pick
+  // with replacement — if the bank holds fewer than n, take all shuffled,
+  // never duplicate.
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  return pool.slice(0, Math.min(count, pool.length));
+  const selected = pool.slice(0, Math.min(count, pool.length));
+  // Every assembled question gets a fresh unbiased option shuffle so
+  // correctIndex is remapped and the A/B/C/D position is not biased by
+  // the seed data (which is almost all index 0).
+  return selected.map(shuffleOptions);
 }
 
 export function getAllTopics(): { topic: string; subtopic: string; section: string }[] {
