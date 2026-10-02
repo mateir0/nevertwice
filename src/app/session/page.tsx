@@ -236,7 +236,7 @@ export default function SessionPage() {
           )}
 
           <div className="mt-5 flex items-center justify-between gap-3">
-            <Link href="/" className="font-mono text-xs tracking-widest text-static-grey underline">
+            <Link href="/app" className="font-mono text-xs tracking-widest text-static-grey underline">
               QUIT
             </Link>
             {!isLast ? (

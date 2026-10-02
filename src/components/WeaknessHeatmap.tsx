@@ -29,10 +29,32 @@ export function WeaknessHeatmap({ nodes, title = "WEAKNESS HEATMAP", highlightKe
   if (nodes.length === 0) {
     return (
       <section aria-label={title} className="card phosphor-grid">
-        <h2 className="font-display text-xl tracking-widest text-phosphor-amber">{title}</h2>
-        <div className="flex min-h-[180px] items-center justify-center">
-          <p className="text-center font-mono text-sm text-static-grey">
-            NO DATA — COMPLETE SESSIONS TO POPULATE HEATMAP
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="font-display text-xl tracking-widest text-phosphor-amber">{title}</h2>
+          <span className="terminal-border bg-terminal-bg px-2 py-1 font-mono text-[11px] tracking-widest text-crt-green">
+            ● LIVE FEED
+          </span>
+        </div>
+        <div className="terminal-border bg-terminal-bg p-4 font-mono text-[13px] leading-relaxed">
+          <p className="text-crt-green">&gt; weakness_graph --status</p>
+          <p className="text-static-grey">[······] scanning 0 nodes … nothing indexed yet</p>
+          <p className="text-crt-green">&gt; signal: <span className="text-phosphor-amber">AWAITING FIRST SESSION</span></p>
+          <div className="mt-3 grid grid-cols-4 gap-1.5" aria-hidden="true">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="terminal-border flex h-12 items-center justify-center font-display text-lg text-terminal-border"
+              >
+                ░
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-static-grey">
+            Every mistake you classify lights up a cell. Run one session and this grid starts learning where you bleed marks.
+          </p>
+          <p className="mt-1 text-crt-green">
+            &gt; next_action: <span className="underline">HIT BEGIN — 20 QUESTIONS, 18 MINUTES</span>
+            <span className="animate-pulse"> ▊</span>
           </p>
         </div>
       </section>

@@ -55,7 +55,7 @@ export default function ResultsPage() {
         <div className="text-center">
           <p className="font-display text-3xl tracking-widest text-tape-red">NO SESSION DATA</p>
           <p className="mt-2 font-mono text-sm text-static-grey">RUN A SESSION FIRST.</p>
-          <Link href="/" className="btn-primary mt-6 inline-block">
+          <Link href="/app" className="btn-primary mt-6 inline-block">
             HOME
           </Link>
         </div>
@@ -165,8 +165,8 @@ export default function ResultsPage() {
         <Link href="/session" className="btn-primary block text-center">
           ANOTHER SESSION
         </Link>
-        <Link href="/" className="btn-secondary block text-center">
-          BACK TO HOME
+        <Link href="/app" className="btn-secondary block text-center">
+          BACK TO APP
         </Link>
       </footer>
     </div>
