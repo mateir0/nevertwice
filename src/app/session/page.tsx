@@ -7,6 +7,7 @@ import { PacingRing } from "@/components/PacingRing";
 import { ERROR_TYPES, ExamEngine } from "@/engine/exam-engine";
 import { clearActiveDrill, loadActiveDrill, type DrillPlan } from "@/engine/drill-planner";
 import type { ErrorType, Question } from "@/types";
+import { displayMath } from "@/engine/format-math";
 import { getQuestionsForSession } from "@/config/exams";
 import { nustConfig } from "@/config/exams/nust";
 
@@ -145,7 +146,7 @@ export default function SessionPage() {
           <p className="font-display text-2xl tracking-wide text-parchment">{drill ? "TARGETED DRILL" : "NET SESSION"}</p>
           <p className="font-type text-xs tracking-widest text-faded" aria-live="polite">
             Q {index + 1}/{total}
-            {drill ? ` · ${drill.targets.map((t) => t.subtopic.toUpperCase()).join(" / ")}` : ""}
+            {drill ? " · TARGETED DRILL" : ""}
           </p>
         </div>
         <PacingRing secondsRemaining={secondsLeft} totalSeconds={TOTAL_SECONDS} size={64} strokeWidth={5} />
@@ -167,7 +168,7 @@ export default function SessionPage() {
             </span>
           </div>
 
-          <p className="mb-5 font-display text-[17px] leading-relaxed text-parchment">{question.text}</p>
+          <p className="mb-5 font-display text-[17px] leading-relaxed text-parchment">{displayMath(question.text)}</p>
 
           <div className="grid grid-cols-1 gap-3" role="radiogroup" aria-label="Answer options">
             {question.options.map((opt, i) => {
@@ -194,7 +195,7 @@ export default function SessionPage() {
                   }}
                 >
                   <span className="font-type text-base font-bold">{letter}.</span>
-                  <span className="flex-1">{opt}</span>
+                  <span className="flex-1">{displayMath(opt)}</span>
                   {revealed && <span className="rounded bg-olive px-1.5 font-type text-night">✓</span>}
                   {wrongPick && <span className="rounded bg-blood px-1.5 font-type text-parchment">✗</span>}
                 </button>

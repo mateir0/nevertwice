@@ -102,7 +102,7 @@ async function callGroq(prompt: string, apiKey: string, timeoutMs = 30000) {
           {
             role: "system",
             content:
-              "You are a drill-question engine for NUST Entry Test prep. Output ONLY strict JSON — no markdown, no fences, no commentary.",
+              "You are a drill-question engine for NUST Entry Test prep. Output ONLY strict JSON — no markdown, no fences, no commentary. Write each question as a real exam stem. Never prefix with 'Drill', 'Practice', or topic names. Use Unicode math notation directly — superscripts (x², x³), √, π, θ, ×, ÷, ±, →, ∞. Never caret notation, LaTeX, backslashes, or delimiters.",
           },
           { role: "user", content: prompt },
         ],

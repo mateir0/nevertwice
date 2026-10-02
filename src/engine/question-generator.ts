@@ -1,5 +1,6 @@
 import type { ErrorType, Question } from "@/types";
 import { nustSeedQuestions } from "@/config/exams/nust";
+import { sanitizeStem } from "@/engine/format-math";
 
 /**
  * Drill question generator.
@@ -53,6 +54,8 @@ export function buildDrillPrompt(targets: DrillGenTarget[]): string {
     "STRICT OUTPUT CONTRACT. Respond with ONLY a raw JSON array, no markdown, no code fences, no commentary.",
     "Each element must be exactly: {\"text\": string, \"options\": [4 distinct strings], \"correctIndex\": 0|1|2|3}.",
     "Every question needs exactly 4 options and exactly one correct answer.",
+    "Write each question as a real exam stem. Never prefix with 'Drill', 'Practice', or topic names.",
+    "Use Unicode math notation directly — superscripts (x², x³), √, π, θ, ×, ÷, ±, →, ∞. Never caret notation, LaTeX, backslashes, or \\( \\) delimiters.",
   ].join("\n");
 }
 
@@ -104,7 +107,10 @@ function slug(s: string): string {
 }
 
 function stripSeedPrefix(text: string): string {
-  return text.replace(/^Stand-in drill Q\d+\s*—\s*/, "").trim() || text;
+  return text
+    .replace(/^Stand-in drill Q\d+\s*—\s*/, "")
+    .replace(/^\s*Practice drill:\s*/i, "")
+    .trim() || text;
 }
 
 /**
@@ -120,7 +126,9 @@ export function buildDrillFallback(targets: DrillGenTarget[]): Question[] {
     const pool = sameSub.length > 0 ? sameSub : sameTopic.length > 0 ? sameTopic : nustSeedQuestions;
     for (let k = 0; k < Math.max(0, t.count); k++) {
       const base = pool[(k + ti) % pool.length];
-      const stem = stripSeedPrefix(base.text);
+      // Stem only — no "Drill · {subtopic} —" meta-prefix. Topic metadata
+      // lives in the topic/subtopic fields and the tag pill, not the text.
+      const stem = sanitizeStem(stripSeedPrefix(base.text));
       const rng = mulberry32(hashString(`${t.topic}::${t.subtopic}::${k}`));
       const order = [0, 1, 2, 3].sort(() => rng() - 0.5);
       const options = order.map((oi) => base.options[oi]);
@@ -129,7 +137,7 @@ export function buildDrillFallback(targets: DrillGenTarget[]): Question[] {
         section: base.section,
         topic: t.topic,
         subtopic: t.subtopic,
-        text: `Drill · ${t.subtopic} — ${stem}`,
+        text: stem,
         options,
         correctIndex: order.indexOf(base.correctIndex),
         isPlaceholder: false,
@@ -162,8 +170,8 @@ export function assignToSlots(generated: RawGenerated[], targets: DrillGenTarget
       section: slot.section,
       topic: slot.topic,
       subtopic: slot.subtopic,
-      text: g.text,
-      options: g.options,
+      text: sanitizeStem(g.text),
+      options: g.options.map((o) => sanitizeStem(o)),
       correctIndex: g.correctIndex,
       isPlaceholder: false,
     } satisfies Question;
