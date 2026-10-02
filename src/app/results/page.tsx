@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { WeaknessHeatmap } from "@/components/WeaknessHeatmap";
 import { ERROR_TYPES, ExamEngine } from "@/engine/exam-engine";
+import { planDrill, type DrillPlan } from "@/engine/drill-planner";
 import type { ErrorType, Session } from "@/types";
 
 function formatDuration(totalSeconds: number): string {
@@ -19,11 +20,13 @@ function errorLabel(v: ErrorType): string {
 export default function ResultsPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [nodes, setNodes] = useState(ExamEngine.getWeaknessNodes());
+  const [nextPlan, setNextPlan] = useState<DrillPlan | null>(null);
 
   useEffect(() => {
     const sessions = ExamEngine.getSessions();
     setSession(sessions[0] ?? null);
     setNodes(ExamEngine.getWeaknessNodes());
+    setNextPlan(planDrill());
   }, []);
 
   const detail = useMemo(() => ExamEngine.loadLastDetail(), [session]);
@@ -156,6 +159,23 @@ export default function ResultsPage() {
             </ul>
           )}
         </section>
+
+        {nextPlan && (
+          <section aria-label="Next target" className="card">
+            <p className="label">
+              NEXT TARGET FILED
+            </p>
+            <p className="font-display mt-1 text-2xl tracking-wide text-parchment">
+              {nextPlan.questions.length} QUESTIONS • TARGETED
+            </p>
+            <p className="mt-1 font-display text-[17px] text-parchment/80">
+              {nextPlan.reason}
+            </p>
+            <Link href="/app" className="btn-primary mt-4 block text-center">
+              BACK TO APP
+            </Link>
+          </section>
+        )}
 
         <WeaknessHeatmap nodes={nodes} title="HEATMAP — WHAT CHANGED" highlightKeys={highlightKeys} />
         <p className="text-center font-type text-[11px] text-faded">

@@ -1,15 +1,30 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Timer, Zap } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Crosshair, Timer, Zap } from "lucide-react";
 import { Wordmark } from "@/components/Wordmark";
 import { WeaknessHeatmap } from "@/components/WeaknessHeatmap";
 import { RecentSessions } from "@/components/RecentSessions";
 import { useSessions, useWeaknessNodes } from "@/hooks/useExam";
+import { planDrill, saveActiveDrill, type DrillPlan } from "@/engine/drill-planner";
 
 export default function AppDashboard() {
+  const router = useRouter();
   const nodes = useWeaknessNodes();
   const { sessions } = useSessions();
+  const [plan, setPlan] = useState<DrillPlan | null>(null);
+
+  useEffect(() => {
+    setPlan(planDrill());
+  }, [sessions]);
+
+  function beginDrill(): void {
+    if (!plan) return;
+    saveActiveDrill(plan);
+    router.push("/session");
+  }
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8">
@@ -31,21 +46,42 @@ export default function AppDashboard() {
 
       <main className="grid gap-5 md:grid-cols-[1.2fr_1fr] md:items-start">
         <div className="space-y-5">
-          <section aria-label="Next step" className="card reveal" style={{ animationDelay: "90ms" }}>
-            <p className="label">
-              YOUR NEXT 15 MINUTES
-            </p>
-            <p className="font-display mt-1 text-2xl tracking-wide text-parchment">
-              20 QUESTIONS • 18 MINUTES • PACED
-            </p>
-            <p className="mt-1 font-display text-[17px] text-parchment/80">
-              One question at a time. Wrong answers get classified so the heatmap learns.
-            </p>
-            <Link href="/session" className="btn-primary mt-4 flex items-center justify-center gap-2 text-center text-lg">
-              <Zap className="h-5 w-5" aria-hidden="true" />
-              BEGIN
-            </Link>
-          </section>
+          {plan ? (
+            <section aria-label="Next drill" className="card reveal" style={{ animationDelay: "90ms" }}>
+              <p className="label">
+                YOUR NEXT DRILL
+              </p>
+              <p className="font-display mt-1 text-2xl tracking-wide text-parchment">
+                {plan.questions.length} QUESTIONS • TARGETED • PACED
+              </p>
+              <p className="mt-1 font-display text-[17px] text-parchment/80">
+                {plan.reason}
+              </p>
+              <p className="mt-2 font-type text-xs tracking-widest text-faded">
+                {plan.targets.map((t) => t.subtopic.toUpperCase()).join(" · ")}
+              </p>
+              <button onClick={beginDrill} className="btn-primary mt-4 flex w-full items-center justify-center gap-2 text-center text-lg">
+                <Crosshair className="h-5 w-5" aria-hidden="true" />
+                BEGIN DRILL
+              </button>
+            </section>
+          ) : (
+            <section aria-label="Next step" className="card reveal" style={{ animationDelay: "90ms" }}>
+              <p className="label">
+                YOUR NEXT 15 MINUTES
+              </p>
+              <p className="font-display mt-1 text-2xl tracking-wide text-parchment">
+                20 QUESTIONS • 18 MINUTES • PACED
+              </p>
+              <p className="mt-1 font-display text-[17px] text-parchment/80">
+                One question at a time. Wrong answers get classified so the heatmap learns.
+              </p>
+              <Link href="/session" className="btn-primary mt-4 flex items-center justify-center gap-2 text-center text-lg">
+                <Zap className="h-5 w-5" aria-hidden="true" />
+                BEGIN
+              </Link>
+            </section>
+          )}
 
           <WeaknessHeatmap
             nodes={nodes}

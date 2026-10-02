@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PacingRing } from "@/components/PacingRing";
 import { ERROR_TYPES, ExamEngine } from "@/engine/exam-engine";
+import { clearActiveDrill, loadActiveDrill, type DrillPlan } from "@/engine/drill-planner";
 import type { ErrorType, Question } from "@/types";
 import { getQuestionsForSession } from "@/config/exams";
 import { nustConfig } from "@/config/exams/nust";
@@ -14,6 +15,7 @@ const TOTAL_SECONDS = nustConfig.secondsPerQuestion;
 export default function SessionPage() {
   const router = useRouter();
   const [questions, setQuestions] = useState<Question[] | null>(null);
+  const [drill, setDrill] = useState<DrillPlan | null>(null);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [errorKinds, setErrorKinds] = useState<(ErrorType | null)[]>([]);
@@ -22,7 +24,9 @@ export default function SessionPage() {
   const [finishing, setFinishing] = useState(false);
 
   useEffect(() => {
-    const qs = getQuestionsForSession(20);
+    const active = loadActiveDrill();
+    const qs = active ? active.questions : getQuestionsForSession(20);
+    if (active) setDrill(active);
     setQuestions(qs);
     setAnswers(new Array(qs.length).fill(null));
     setErrorKinds(new Array(qs.length).fill(null));
@@ -130,6 +134,7 @@ export default function SessionPage() {
       })),
     );
     ExamEngine.recordSession(session);
+    clearActiveDrill();
     router.push("/results");
   }
 
@@ -137,9 +142,10 @@ export default function SessionPage() {
     <div className="mx-auto w-full max-w-[480px] px-4 py-4">
       <header className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <p className="font-display text-2xl tracking-wide text-parchment">NET SESSION</p>
+          <p className="font-display text-2xl tracking-wide text-parchment">{drill ? "TARGETED DRILL" : "NET SESSION"}</p>
           <p className="font-type text-xs tracking-widest text-faded" aria-live="polite">
             Q {index + 1}/{total}
+            {drill ? ` · ${drill.targets.map((t) => t.subtopic.toUpperCase()).join(" / ")}` : ""}
           </p>
         </div>
         <PacingRing secondsRemaining={secondsLeft} totalSeconds={TOTAL_SECONDS} size={64} strokeWidth={5} />
