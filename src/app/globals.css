@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  /* ---- Steampunk Circuitry palette (DESIGN.md, exact) ---- */
-  --color-parchment: #F5DEB3;
-  --color-ivory: #FFFDF5;
-  --color-mahogany: #5C0000;
-  --color-mahogany-deep: #420000;
-  --color-brass: #B5A642;
-  --color-copper: #B87333;
-  --color-teal: #008080;
-  --color-ink: #2A2118;
-  --color-brick: #8A3B1F;
+  /* ---- THE DOSSIER palette — dark Soviet-archival ---- */
+  --color-night: #0B0906;      /* page canvas, near-black warm */
+  --color-panel: #14110B;      /* card surfaces */
+  --color-panel2: #1C1710;     /* raised surfaces */
+  --color-parchment: #E8DCC0;  /* primary text */
+  --color-faded: #9A8A6B;      /* muted text */
+  --color-blood: #B3202C;      /* Soviet red — CTAs, faults, stars */
+  --color-blood-deep: #7C1420; /* deep red */
+  --color-bronze: #A67C3D;     /* borders, metallic detail */
+  --color-amber: #D9A441;      /* highlights, warnings */
+  --color-olive: #6B7F4E;      /* clean / verified states */
 
-  --font-display: var(--font-fell), "IM Fell English", Georgia, "Times New Roman", serif;
-  --font-label: var(--font-fellsc), "IM Fell English SC", Georgia, "Times New Roman", serif;
-  --font-mono: var(--font-jbmono), "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-display: var(--font-russo), "Russo One", "Arial Black", sans-serif;
+  --font-type: var(--font-courier), "Courier Prime", "Courier New", monospace;
 }
 
 @keyframes board-rise {
@@ -27,22 +27,27 @@
   50% { opacity: 0.35; }
 }
 
-/* ---- Steampunk Circuitry custom utilities ---- */
+@keyframes stamp-in {
+  from { opacity: 0; transform: scale(1.4) rotate(-8deg); }
+  to { opacity: 1; transform: scale(1) rotate(-8deg); }
+}
 
-@utility brass-frame {
-  border: 1px solid var(--color-brass);
+/* ---- Dossier custom utilities ---- */
+
+@utility bronze-frame {
+  border: 1px solid var(--color-bronze);
   border-radius: 4px;
 }
 
-@utility copper-border {
-  border: 1px solid var(--color-copper);
+@utility blood-frame {
+  border: 1px solid var(--color-blood);
   border-radius: 4px;
 }
 
-@utility trace-divider-line {
-  background-color: var(--color-copper);
-  height: 2px;
-  border-radius: 2px;
+@utility dossier-line {
+  background-color: var(--color-bronze);
+  height: 1px;
+  opacity: 0.55;
 }
 
 @utility reveal {
@@ -53,152 +58,186 @@
   animation: via-pulse 1.6s ease-in-out infinite;
 }
 
+@utility stamp {
+  animation: stamp-in 400ms ease-out both;
+}
+
+/* Film grain over the whole page */
+@utility grain {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0.075;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Cinematic vignette */
+@utility vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 89;
+  pointer-events: none;
+  background: radial-gradient(ellipse 120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.5) 100%);
+}
+
 @layer base {
   html {
-    background-color: var(--color-parchment);
-    color: var(--color-ink);
-    font-family: var(--font-display);
-    font-size: 17px;
+    background-color: var(--color-night);
+    color: var(--color-parchment);
+    font-family: var(--font-type);
+    font-size: 16px;
     line-height: 1.7;
   }
 
   body {
     min-height: 100dvh;
-    background-color: var(--color-parchment);
-    color: var(--color-ink);
-    font-family: var(--font-display);
-    font-size: 1.0625rem;
+    background-color: var(--color-night);
+    color: var(--color-parchment);
+    font-family: var(--font-type);
+    font-size: 1rem;
     line-height: 1.7;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     font-weight: 400;
-    letter-spacing: 0.01em;
-    color: var(--color-ink);
+    letter-spacing: 0.02em;
+    color: var(--color-parchment);
   }
 
   ::selection {
-    background-color: var(--color-brass);
-    color: var(--color-ink);
+    background-color: var(--color-blood);
+    color: var(--color-parchment);
   }
 }
 
 @layer components {
+  /* Primary: blood-red pill, parchment text, bronze inner line */
   .btn-primary {
-    @apply px-6 py-3 uppercase tracking-wider transition-all duration-200;
-    font-family: var(--font-mono);
+    @apply px-7 py-3 uppercase transition-all duration-200;
+    font-family: var(--font-type);
     font-weight: 700;
-    background-color: var(--color-mahogany);
+    letter-spacing: 0.12em;
+    background-color: var(--color-blood);
     color: var(--color-parchment);
-    border: 1px solid var(--color-mahogany);
-    border-radius: 4px;
+    border: 1px solid var(--color-blood-deep);
+    border-radius: 9999px;
     box-shadow:
-      inset 0 0 0 1px var(--color-brass),
-      inset 0 1px 0 rgba(181, 166, 66, 0.35),
-      0 2px 10px rgba(42, 33, 24, 0.12);
+      inset 0 0 0 1px rgba(166, 124, 61, 0.55),
+      inset 0 1px 0 rgba(232, 220, 192, 0.15),
+      0 2px 14px rgba(179, 32, 44, 0.35);
   }
   .btn-primary:hover {
-    background-color: var(--color-mahogany-deep);
+    background-color: #c62a36;
     box-shadow:
-      inset 0 0 0 1px var(--color-brass),
-      inset 0 1px 0 rgba(181, 166, 66, 0.35),
-      0 4px 14px rgba(42, 33, 24, 0.16);
+      inset 0 0 0 1px rgba(166, 124, 61, 0.7),
+      inset 0 1px 0 rgba(232, 220, 192, 0.2),
+      0 4px 20px rgba(179, 32, 44, 0.5);
     transform: translateY(-1px);
   }
   .btn-primary:active {
     transform: translateY(1px);
-    box-shadow: inset 0 0 0 1px var(--color-brass);
   }
 
+  /* Secondary: bronze outline pill */
   .btn-secondary {
-    @apply px-6 py-3 uppercase tracking-wider transition-all duration-200;
-    font-family: var(--font-mono);
+    @apply px-7 py-3 uppercase transition-all duration-200;
+    font-family: var(--font-type);
     font-weight: 700;
+    letter-spacing: 0.12em;
     background-color: transparent;
-    border: 1.5px solid var(--color-brass);
-    color: var(--color-mahogany);
-    border-radius: 4px;
+    border: 1px solid var(--color-bronze);
+    color: var(--color-bronze);
+    border-radius: 9999px;
   }
   .btn-secondary:hover {
-    background-color: rgba(92, 0, 0, 0.06);
+    background-color: rgba(166, 124, 61, 0.12);
+    color: var(--color-parchment);
+    border-color: var(--color-amber);
   }
   .btn-secondary:active {
     transform: translateY(1px);
   }
 
   .btn-danger {
-    @apply px-6 py-3 uppercase tracking-wider transition-all duration-200;
-    font-family: var(--font-mono);
+    @apply px-7 py-3 uppercase transition-all duration-200;
+    font-family: var(--font-type);
     font-weight: 700;
+    letter-spacing: 0.12em;
     background-color: transparent;
-    border: 1.5px solid var(--color-brick);
-    color: var(--color-ink);
-    border-radius: 4px;
+    border: 1px solid var(--color-blood);
+    color: var(--color-blood);
+    border-radius: 9999px;
   }
   .btn-danger:hover {
-    background-color: rgba(138, 59, 31, 0.08);
-  }
-  .btn-danger:active {
-    transform: translateY(1px);
+    background-color: rgba(179, 32, 44, 0.12);
   }
 
-  /* Riveted instrument plate: ivory, brass frame, 4 corner rivets */
+  /* Dossier panel: dark, bronze frame */
   .card {
-    background-color: var(--color-ivory);
-    background-image:
-      radial-gradient(circle, var(--color-brass) 2.2px, transparent 2.8px),
-      radial-gradient(circle, var(--color-brass) 2.2px, transparent 2.8px),
-      radial-gradient(circle, var(--color-brass) 2.2px, transparent 2.8px),
-      radial-gradient(circle, var(--color-brass) 2.2px, transparent 2.8px);
-    background-repeat: no-repeat;
-    background-position:
-      7px 7px,
-      calc(100% - 7px) 7px,
-      7px calc(100% - 7px),
-      calc(100% - 7px) calc(100% - 7px);
-    border: 1px solid var(--color-brass);
+    background-color: var(--color-panel);
+    border: 1px solid var(--color-bronze);
     border-radius: 4px;
-    box-shadow: 0 2px 10px rgba(42, 33, 24, 0.1);
-    @apply p-4;
+    box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(232, 220, 192, 0.05);
+    @apply p-5;
   }
 
   .input-field {
     @apply w-full px-4 py-3;
-    font-family: var(--font-mono);
-    background-color: var(--color-ivory);
-    border: 1px solid var(--color-copper);
+    font-family: var(--font-type);
+    background-color: var(--color-night);
+    border: 1px solid var(--color-bronze);
     border-radius: 4px;
-    color: var(--color-ink);
+    color: var(--color-parchment);
   }
   .input-field:focus {
     outline: none;
-    border-color: var(--color-mahogany);
-    box-shadow: 0 0 0 2px var(--color-mahogany);
+    border-color: var(--color-amber);
+    box-shadow: 0 0 0 2px rgba(217, 164, 65, 0.35);
   }
 
-  /* Small brass-outlined plates (error classification) */
+  /* Small bronze-outlined plates (error classification) */
   .chip {
-    @apply px-4 py-3 uppercase tracking-wider transition-all duration-200 min-h-[56px];
-    font-family: var(--font-mono);
+    @apply px-4 py-3 uppercase transition-all duration-200 min-h-[56px];
+    font-family: var(--font-type);
     font-weight: 700;
-    background-color: var(--color-ivory);
-    border: 1.5px solid var(--color-brass);
+    letter-spacing: 0.1em;
+    background-color: var(--color-panel2);
+    border: 1px solid var(--color-bronze);
     border-radius: 4px;
-    color: var(--color-ink);
-    box-shadow: 0 1px 6px rgba(42, 33, 24, 0.08);
+    color: var(--color-parchment);
   }
   .chip:hover {
-    border-color: var(--color-copper);
-    background-color: rgba(184, 115, 51, 0.08);
+    border-color: var(--color-amber);
+    background-color: rgba(166, 124, 61, 0.14);
   }
 
-  /* Engraved small-caps label */
+  /* Typewriter small-caps label */
   .label {
-    font-family: var(--font-label);
-    font-size: 0.875rem;
-    font-weight: 400;
-    letter-spacing: 0.08em;
-    color: var(--color-ink);
+    font-family: var(--font-type);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-faded);
+  }
+
+  /* Rubber-stamp treatment */
+  .rubber-stamp {
+    font-family: var(--font-type);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--color-blood);
+    border: 2px solid var(--color-blood);
+    border-radius: 4px;
+    padding: 0.35rem 0.9rem;
+    transform: rotate(-4deg);
+    opacity: 0.85;
+    mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mask-size: 120px;
   }
 }

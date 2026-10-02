@@ -59,7 +59,7 @@ export default function SessionPage() {
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] items-center justify-center px-4">
         <div className="text-center">
           <PacingRing secondsRemaining={TOTAL_SECONDS} totalSeconds={TOTAL_SECONDS} size={96} />
-          <p className="mt-4 font-display text-[17px] text-ink/80">LOADING DRILLS…</p>
+          <p className="mt-4 font-display text-[17px] text-parchment/80">LOADING DRILLS…</p>
         </div>
       </div>
     );
@@ -137,17 +137,17 @@ export default function SessionPage() {
     <div className="mx-auto w-full max-w-[480px] px-4 py-4">
       <header className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <p className="font-display text-2xl tracking-wide text-ink">NET SESSION</p>
-          <p className="font-mono text-xs tracking-widest text-ink/70" aria-live="polite">
+          <p className="font-display text-2xl tracking-wide text-parchment">NET SESSION</p>
+          <p className="font-type text-xs tracking-widest text-faded" aria-live="polite">
             Q {index + 1}/{total}
           </p>
         </div>
         <PacingRing secondsRemaining={secondsLeft} totalSeconds={TOTAL_SECONDS} size={64} strokeWidth={5} />
       </header>
 
-      <div className="copper-border mb-4 h-2 overflow-hidden bg-ivory" aria-hidden="true">
+      <div className="bronze-frame mb-4 h-2 overflow-hidden bg-panel" aria-hidden="true">
         <div
-          className="h-full bg-brass transition-all duration-300"
+          className="h-full bg-bronze transition-all duration-300"
           style={{ width: `${((index + 1) / Math.max(total, 1)) * 100}%` }}
         />
       </div>
@@ -155,13 +155,13 @@ export default function SessionPage() {
       <main>
         <article aria-label={`Question ${index + 1} of ${total}`} className="card">
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="font-display text-xl tracking-wide text-mahogany">{question.section}</span>
-            <span className="copper-border bg-parchment px-2 py-1 font-mono text-[11px] text-ink/70">
+            <span className="font-display text-xl tracking-wide text-blood">{question.section}</span>
+            <span className="bronze-frame bg-night px-2 py-1 font-type text-[11px] text-faded">
               {question.topic} / {question.subtopic}
             </span>
           </div>
 
-          <p className="mb-5 font-display text-[17px] leading-relaxed text-ink">{question.text}</p>
+          <p className="mb-5 font-display text-[17px] leading-relaxed text-parchment">{question.text}</p>
 
           <div className="grid grid-cols-1 gap-3" role="radiogroup" aria-label="Answer options">
             {question.options.map((opt, i) => {
@@ -176,32 +176,32 @@ export default function SessionPage() {
                   aria-checked={picked}
                   disabled={isAnswered}
                   onClick={() => choose(i)}
-                  className="copper-border flex min-h-[56px] items-center gap-3 bg-parchment p-4 text-left font-display text-[16px] text-ink transition-all duration-200 disabled:cursor-default"
+                  className="bronze-frame flex min-h-[56px] items-center gap-3 bg-night p-4 text-left font-display text-[16px] text-parchment transition-all duration-200 disabled:cursor-default"
                   style={{
-                    borderColor: revealed ? "#008080" : wrongPick ? "#5C0000" : undefined,
+                    borderColor: revealed ? "#6B7F4E" : wrongPick ? "#B3202C" : undefined,
                     borderWidth: revealed || wrongPick ? "2px" : undefined,
                     backgroundColor: revealed
-                      ? "rgba(0,128,128,0.1)"
+                      ? "rgba(107,127,78,0.1)"
                       : wrongPick
-                        ? "rgba(92,0,0,0.08)"
+                        ? "rgba(179,32,44,0.08)"
                         : undefined,
                   }}
                 >
-                  <span className="font-mono text-base font-bold">{letter}.</span>
+                  <span className="font-type text-base font-bold">{letter}.</span>
                   <span className="flex-1">{opt}</span>
-                  {revealed && <span className="rounded bg-teal px-1.5 font-mono text-ivory">✓</span>}
-                  {wrongPick && <span className="rounded bg-mahogany px-1.5 font-mono text-parchment">✗</span>}
+                  {revealed && <span className="rounded bg-olive px-1.5 font-type text-night">✓</span>}
+                  {wrongPick && <span className="rounded bg-blood px-1.5 font-type text-parchment">✗</span>}
                 </button>
               );
             })}
           </div>
 
           {isWrong && (
-            <div className="mt-5 border-t border-copper pt-4" role="group" aria-label="Classify the error">
-              <p className="font-display text-xl tracking-wide text-ink">
-                <span className="rounded bg-mahogany px-2 py-0.5 font-mono text-sm font-bold text-parchment">WRONG</span> — WHAT HAPPENED?
+            <div className="mt-5 border-t border-bronze pt-4" role="group" aria-label="Classify the error">
+              <p className="font-display text-xl tracking-wide text-parchment">
+                <span className="rounded bg-blood px-2 py-0.5 font-type text-sm font-bold text-parchment">WRONG</span> — WHAT HAPPENED?
               </p>
-              <p className="mb-3 font-mono text-xs text-ink/70">
+              <p className="mb-3 font-type text-xs text-faded">
                 TAP ONE. REQUIRED BEFORE ADVANCING.
               </p>
               <div className="grid grid-cols-1 gap-2">
@@ -215,12 +215,12 @@ export default function SessionPage() {
                       className="chip text-left"
                       style={
                         active
-                          ? { borderColor: "#5C0000", borderWidth: "2px", backgroundColor: "rgba(92,0,0,0.07)" }
+                          ? { borderColor: "#B3202C", borderWidth: "2px", backgroundColor: "rgba(179,32,44,0.07)" }
                           : undefined
                       }
                     >
-                      <span className="block font-mono text-base font-bold">{t.label}</span>
-                      <span className="block font-display text-[15px] normal-case tracking-normal text-ink/80">
+                      <span className="block font-type text-base font-bold">{t.label}</span>
+                      <span className="block font-display text-[15px] normal-case tracking-normal text-parchment/80">
                         {t.description}
                       </span>
                     </button>
@@ -231,13 +231,13 @@ export default function SessionPage() {
           )}
 
           {isCorrect && (
-            <p className="font-display mt-5 border-t border-copper pt-4 text-xl tracking-wide text-ink">
-              <span className="rounded bg-teal px-2 py-0.5 font-mono text-sm font-bold text-ivory">CORRECT</span> — LOCKED IN.
+            <p className="font-display mt-5 border-t border-bronze pt-4 text-xl tracking-wide text-parchment">
+              <span className="rounded bg-olive px-2 py-0.5 font-type text-sm font-bold text-night">CORRECT</span> — LOCKED IN.
             </p>
           )}
 
           <div className="mt-5 flex items-center justify-between gap-3">
-            <Link href="/app" className="font-mono text-xs tracking-widest text-ink/70 underline">
+            <Link href="/app" className="font-type text-xs tracking-widest text-faded underline">
               QUIT
             </Link>
             {!isLast ? (
@@ -259,7 +259,7 @@ export default function SessionPage() {
             )}
           </div>
           {isAnswered && !canAdvance && (
-            <p className="mt-2 text-right font-mono text-[11px] font-bold text-mahogany">
+            <p className="mt-2 text-right font-type text-[11px] font-bold text-blood">
               CLASSIFY THE ERROR TO CONTINUE
             </p>
           )}

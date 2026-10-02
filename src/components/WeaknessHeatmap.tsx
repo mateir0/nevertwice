@@ -22,24 +22,24 @@ interface LineStyle {
   glow: string;
 }
 
-/** Fault lines glow mahogany, watch lines run copper/brass, clean lines show teal. */
+/** Fault lines burn blood-red, watch lines run bronze, clean lines show olive. */
 function lineStyle(count: number, max: number): LineStyle {
   if (count <= 0) {
-    return { backgroundColor: "#008080", color: "#FFFDF5", borderColor: "#008080", glow: "none" };
+    return { backgroundColor: "#6B7F4E", color: "#0B0906", borderColor: "#6B7F4E", glow: "none" };
   }
   const t = max > 0 ? Math.min(count / max, 1) : 1;
   if (t > 0.66) {
     return {
-      backgroundColor: "#5C0000",
-      color: "#F5DEB3",
-      borderColor: "#5C0000",
-      glow: "0 0 10px rgba(92,0,0,0.45)",
+      backgroundColor: "#B3202C",
+      color: "#E8DCC0",
+      borderColor: "#B3202C",
+      glow: "0 0 12px rgba(179,32,44,0.5)",
     };
   }
   if (t > 0.33) {
-    return { backgroundColor: "#B87333", color: "#FFFDF5", borderColor: "#B87333", glow: "none" };
+    return { backgroundColor: "#A67C3D", color: "#0B0906", borderColor: "#A67C3D", glow: "none" };
   }
-  return { backgroundColor: "#B5A642", color: "#2A2118", borderColor: "#B5A642", glow: "none" };
+  return { backgroundColor: "#D9A441", color: "#0B0906", borderColor: "#D9A441", glow: "none" };
 }
 
 function trendGlyph(trend: WeaknessNode["trend"]): string {
@@ -60,18 +60,19 @@ export function WeaknessHeatmap({
     return (
       <section aria-label={title} className="card">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="font-display text-2xl tracking-wide text-ink">{title}</h2>
-          <span className="rounded-full border border-brass bg-parchment px-2 py-1 font-mono text-[11px] tracking-widest text-copper">
+          <h2 className="font-display text-xl tracking-[0.06em] text-parchment">{title}</h2>
+          <span className="rounded-full border border-bronze bg-night px-2 py-1 font-type text-[11px] tracking-[0.2em] text-bronze">
             REV A
           </span>
         </div>
-        <div className="copper-border flex flex-col items-center bg-parchment px-4 py-8 text-center">
-          <CircuitBoard className="h-10 w-10 text-copper" strokeWidth={1.5} aria-hidden="true" />
-          <p className="font-display mt-3 text-2xl tracking-wide text-ink">BOARD UNPOPULATED</p>
-          <p className="mt-2 max-w-[52ch] font-display text-[17px] leading-relaxed text-ink/80">
-            No nodes routed yet. Complete a session and every classified mistake solders a new trace onto this board.
+        <div className="flex flex-col items-center border border-bronze/60 bg-night px-4 py-8 text-center">
+          <CircuitBoard className="h-10 w-10 text-bronze" strokeWidth={1.5} aria-hidden="true" />
+          <p className="font-display mt-3 text-xl tracking-[0.06em] text-parchment">BOARD UNPOPULATED</p>
+          <p className="mt-2 max-w-[52ch] font-type text-[14px] leading-relaxed text-faded">
+            No nodes filed yet. Complete a session and every classified mistake
+            is entered into this dossier.
           </p>
-          <Link href={emptyAction.href} className="btn-primary mt-5 text-base">
+          <Link href={emptyAction.href} className="btn-primary mt-5 text-sm">
             {emptyAction.label}
           </Link>
         </div>
@@ -81,7 +82,7 @@ export function WeaknessHeatmap({
 
   const max = Math.max(...nodes.map((n) => n.mistakeCount), 1);
 
-  // Group subtopic lines by topic exchange, hottest exchanges first.
+  // Group subtopic lines by topic, hottest first.
   const groups = new Map<string, WeaknessNode[]>();
   for (const n of nodes) {
     const list = groups.get(n.topic) ?? [];
@@ -99,40 +100,38 @@ export function WeaknessHeatmap({
   return (
     <section aria-label={title} className="card">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-2xl tracking-wide text-ink">{title}</h2>
-        <div className="flex items-center gap-3 font-mono text-[11px] text-ink/70">
+        <h2 className="font-display text-xl tracking-[0.06em] text-parchment">{title}</h2>
+        <div className="flex items-center gap-3 font-type text-[11px] uppercase tracking-[0.14em] text-faded">
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-mahogany" />
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-blood" />
             FAULT
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-copper" />
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-bronze" />
             WATCH
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-teal" />
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-olive" />
             CLEAN
           </span>
         </div>
       </div>
 
-      <div className="copper-border space-y-5 bg-parchment p-3 sm:p-4" role="list" aria-label="Weakness switchboard">
+      <div className="space-y-5 border border-bronze/60 bg-night p-3 sm:p-4" role="list" aria-label="Threat board">
         {ordered.map((g) => (
           <div key={g.topic}>
-            {/* Exchange header: brass terminal + engraved topic + routed trace */}
             <div className="mb-2 flex items-center gap-2">
               <span
                 aria-hidden="true"
                 className="inline-block h-3 w-3 shrink-0 rounded-full border-2"
-                style={{ borderColor: "#B5A642", backgroundColor: g.heat > 0 ? "#5C0000" : "#008080" }}
+                style={{ borderColor: "#A67C3D", backgroundColor: g.heat > 0 ? "#B3202C" : "#6B7F4E" }}
               />
-              <span className="font-label text-base tracking-[0.08em] text-ink">{g.topic.toUpperCase()}</span>
-              <span aria-hidden="true" className="trace-divider-line min-w-4 flex-1" />
-              <span className="font-mono text-[11px] text-ink/70">
+              <span className="font-type text-sm font-bold uppercase tracking-[0.18em] text-parchment">{g.topic}</span>
+              <span aria-hidden="true" className="dossier-line min-w-4 flex-1" />
+              <span className="font-type text-[11px] uppercase tracking-[0.14em] text-faded">
                 {g.heat} FAULT{g.heat === 1 ? "" : "S"}
               </span>
             </div>
-            {/* Terminal nodes: brass-framed jacks wired to the exchange */}
             <div
               className="grid gap-3"
               style={{ gridTemplateColumns: "repeat(auto-fill, minmax(104px, 1fr))" }}
@@ -151,26 +150,19 @@ export function WeaknessHeatmap({
                       backgroundColor: s.backgroundColor,
                       border: `1.5px solid ${s.borderColor}`,
                       boxShadow: s.glow,
-                      outline: isNew ? "2px solid #B5A642" : "none",
+                      outline: isNew ? "2px solid #D9A441" : "none",
                       outlineOffset: "2px",
                     }}
                   >
-                    {/* Binding-post stubs */}
-                    <span aria-hidden="true" className="absolute -left-[5px] top-[22%] h-[3px] w-[5px] bg-brass" />
-                    <span aria-hidden="true" className="absolute -left-[5px] top-[48%] h-[3px] w-[5px] bg-brass" />
-                    <span aria-hidden="true" className="absolute -left-[5px] top-[74%] h-[3px] w-[5px] bg-brass" />
-                    <span aria-hidden="true" className="absolute -right-[5px] top-[22%] h-[3px] w-[5px] bg-brass" />
-                    <span aria-hidden="true" className="absolute -right-[5px] top-[48%] h-[3px] w-[5px] bg-brass" />
-                    <span aria-hidden="true" className="absolute -right-[5px] top-[74%] h-[3px] w-[5px] bg-brass" />
                     <div
                       className="flex min-h-[72px] flex-col items-center justify-center p-1.5 text-center"
                       style={{ color: s.color }}
                     >
-                      <span className="font-display text-[15px] leading-tight">{node.subtopic}</span>
-                      <span className="font-mono text-[10px] leading-tight">
-                        {node.mistakeCount} ERR • {trendGlyph(node.trend)}
+                      <span className="font-display text-[14px] leading-tight">{node.subtopic}</span>
+                      <span className="font-type text-[10px] leading-tight">
+                        {node.mistakeCount} ERR · {trendGlyph(node.trend)}
                       </span>
-                      {isNew && <span className="via-live mt-1 inline-block h-1.5 w-1.5 rounded-full bg-brass" />}
+                      {isNew && <span className="via-live mt-1 inline-block h-1.5 w-1.5 rounded-full bg-night" />}
                     </div>
                   </div>
                 );
@@ -179,8 +171,8 @@ export function WeaknessHeatmap({
           </div>
         ))}
       </div>
-      <p className="mt-3 font-mono text-[11px] text-ink/70">
-        {nodes.length} NODES ROUTED • MAX {max} FAULTS
+      <p className="mt-3 font-type text-[11px] uppercase tracking-[0.14em] text-faded">
+        {nodes.length} NODES FILED · MAX {max} FAULTS
       </p>
     </section>
   );

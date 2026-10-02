@@ -21,7 +21,7 @@ export function PacingRing({
 
   const isCritical = clamped <= 5;
   const isWarning = clamped <= 15;
-  const stroke = isCritical ? "#5C0000" : isWarning ? "#B87333" : "#B5A642";
+  const stroke = isCritical ? "#B3202C" : isWarning ? "#A67C3D" : "#D9A441";
 
   return (
     <div
@@ -31,7 +31,7 @@ export function PacingRing({
       aria-label={`${clamped} seconds remaining`}
     >
       <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(42,33,24,0.15)" strokeWidth={strokeWidth} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth={strokeWidth} />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -47,7 +47,7 @@ export function PacingRing({
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
         <span
-          className="font-mono font-bold tabular-nums text-ink"
+          className="font-type font-bold tabular-nums text-parchment"
           style={{ fontSize: size * 0.32 }}
         >
           {clamped}s

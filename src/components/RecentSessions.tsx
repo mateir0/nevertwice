@@ -14,20 +14,20 @@ function formatDate(ts: number): string {
 }
 
 function accStyle(acc: number): { backgroundColor: string; color: string } {
-  if (acc >= 70) return { backgroundColor: "#008080", color: "#FFFDF5" };
-  if (acc >= 40) return { backgroundColor: "#B87333", color: "#FFFDF5" };
-  return { backgroundColor: "#5C0000", color: "#F5DEB3" };
+  if (acc >= 70) return { backgroundColor: "#6B7F4E", color: "#E8DCC0" };
+  if (acc >= 40) return { backgroundColor: "#A67C3D", color: "#E8DCC0" };
+  return { backgroundColor: "#B3202C", color: "#E8DCC0" };
 }
 
 export function RecentSessions({ sessions }: { sessions: Session[] }) {
   if (sessions.length === 0) {
     return (
       <section aria-label="Recent sessions" className="card">
-        <h2 className="font-display flex items-center gap-2 text-2xl tracking-wide text-ink">
-          <History className="h-5 w-5 text-copper" aria-hidden="true" />
+        <h2 className="font-display flex items-center gap-2 text-2xl tracking-wide text-parchment">
+          <History className="h-5 w-5 text-bronze" aria-hidden="true" />
           RECENT SESSIONS
         </h2>
-        <p className="mt-2 font-display text-[17px] text-ink/80">
+        <p className="mt-2 font-display text-[17px] text-parchment/80">
           NO SESSIONS YET — HIT BEGIN ABOVE.
         </p>
       </section>
@@ -36,8 +36,8 @@ export function RecentSessions({ sessions }: { sessions: Session[] }) {
 
   return (
     <section aria-label="Recent sessions" className="card">
-      <h2 className="font-display flex items-center gap-2 text-2xl tracking-wide text-ink">
-        <History className="h-5 w-5 text-copper" aria-hidden="true" />
+      <h2 className="font-display flex items-center gap-2 text-2xl tracking-wide text-parchment">
+        <History className="h-5 w-5 text-bronze" aria-hidden="true" />
         RECENT SESSIONS
       </h2>
       <ul className="mt-3 space-y-2">
@@ -47,16 +47,16 @@ export function RecentSessions({ sessions }: { sessions: Session[] }) {
           return (
             <li
               key={s.id}
-              className="copper-border flex items-center justify-between gap-3 bg-parchment p-3"
+              className="bronze-frame flex items-center justify-between gap-3 bg-night p-3"
             >
               <div className="min-w-0">
-                <p className="truncate font-mono text-xs text-ink/70">{formatDate(s.date)}</p>
-                <p className="font-mono text-sm text-ink">
+                <p className="truncate font-type text-xs text-faded">{formatDate(s.date)}</p>
+                <p className="font-type text-sm text-parchment">
                   {s.correct}/{s.questionsAttempted} • {acc}% • {s.mistakes.length} ERR
                 </p>
               </div>
               <span
-                className="font-mono rounded px-2 py-1 text-lg font-bold"
+                className="font-type rounded px-2 py-1 text-lg font-bold"
                 style={badge}
               >
                 {acc}%
