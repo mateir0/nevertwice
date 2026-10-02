@@ -44,11 +44,11 @@ export default function LandingPage() {
     <div className="mx-auto w-full max-w-5xl px-4 pb-6 md:px-8">
       {/* STICKY HEADER — Victorian instrument strip */}
       <header
-        className="sticky top-0 z-[100] mx-[calc(50%-50vw)] border-y border-brass bg-ivory px-4 py-4 md:px-8"
-        style={{ boxShadow: "0 4px 14px rgba(42,33,24,0.12)" }}
+        className="sticky top-0 z-[100] mx-[calc(50%-50vw)] border-y-2 border-brass bg-ivory px-4 py-4 md:px-8"
+        style={{ boxShadow: "0 4px 14px rgba(42,33,24,0.15)" }}
       >
-        <span aria-hidden="true" className="absolute left-2 top-1/2 inline-block h-2 w-2 -translate-y-1/2 rounded-full bg-brass" />
-        <span aria-hidden="true" className="absolute right-2 top-1/2 inline-block h-2 w-2 -translate-y-1/2 rounded-full bg-brass" />
+        <span aria-hidden="true" className="absolute left-2 top-1/2 inline-block h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-brass" style={{ boxShadow: "0 0 0 1px #8a7a2e" }} />
+        <span aria-hidden="true" className="absolute right-2 top-1/2 inline-block h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-brass" style={{ boxShadow: "0 0 0 1px #8a7a2e" }} />
         <div className="mx-auto flex w-full max-w-5xl items-center gap-5 px-3">
           <Link href="/" className="font-display text-xl tracking-wide text-mahogany">
             NEVERTWICE
@@ -71,10 +71,112 @@ export default function LandingPage() {
         </div>
       </header>
 
+      {/* Faint circuit ambience carried down the page — 0.05, gaps only */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10">
+        <svg
+          focusable="false"
+          className="h-full w-full"
+          viewBox="0 0 1440 2400"
+          preserveAspectRatio="xMidYMin slice"
+        >
+          <g fill="none" stroke="#B87333" strokeWidth="2" opacity="0.05">
+            <path d="M-20,300 H320 L420,400 V900 L520,1000 H900" />
+            <path d="M1460,700 H1120 L1020,800 V1500 L920,1600 H600" />
+            <path d="M-20,1900 H400 L500,2000 H1000 L1100,2100 V2440" />
+            <path d="M1460,1200 H1240 L1160,1280 V1800" />
+          </g>
+          <g opacity="0.05">
+            <rect x="80" y="1050" width="330" height="240" fill="none" stroke="#B5A642" strokeWidth="1.5" />
+            <rect x="1030" y="1700" width="330" height="240" fill="none" stroke="#B5A642" strokeWidth="1.5" />
+          </g>
+          <g fill="#B87333" opacity="0.05">
+            <circle cx="320" cy="300" r="4" />
+            <circle cx="520" cy="1000" r="4" />
+            <circle cx="1120" cy="700" r="4" />
+            <circle cx="920" cy="1600" r="4" />
+            <circle cx="400" cy="1900" r="4" />
+            <circle cx="1100" cy="2100" r="4" />
+            <circle cx="245" cy="1170" r="4" />
+            <circle cx="1195" cy="1820" r="4" />
+          </g>
+          <g stroke="#B5A642" strokeWidth="1.5" opacity="0.05">
+            <path d="M700,600 h12 M706,594 v12" />
+            <path d="M200,1400 h12 M206,1394 v12" />
+            <path d="M1250,1000 h12 M1256,994 v12" />
+            <path d="M800,2200 h12 M806,2194 v12" />
+          </g>
+        </svg>
+      </div>
+
       <main className="space-y-6 pt-6">
         {/* SECTION 1 — HERO, open parchment, split two-column */}
-        <section aria-label="Briefing" className="reveal px-1 py-10 sm:px-2">
-          <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-center">
+        <section aria-label="Briefing" className="reveal relative px-1 py-10 sm:px-2">
+          {/* Engraved circuit watermark — atmosphere only, text always wins */}
+          <svg
+            aria-hidden="true"
+            focusable="false"
+            className="pointer-events-none absolute inset-0 h-full w-full"
+            viewBox="0 0 1200 620"
+            preserveAspectRatio="xMidYMid slice"
+          >
+            {/* Long traces crossing the left column — faded to 0.04 */}
+            <g fill="none" stroke="#B87333" strokeWidth="2" opacity="0.04">
+              <path d="M-20,120 H300 L380,200 H640" />
+              <path d="M-20,420 H240 L330,510 H560" />
+              <path d="M120,640 L120,480 L210,390 H430" />
+            </g>
+            {/* Long traces sweeping the right column — 0.07 */}
+            <g fill="none" stroke="#B87333" strokeWidth="2" opacity="0.07">
+              <path d="M640,200 H860 L950,290 H1240" />
+              <path d="M700,560 L700,430 L800,330 H1040 L1120,250 V40" />
+            </g>
+            <g fill="none" stroke="#B5A642" strokeWidth="2" opacity="0.07">
+              <path d="M880,620 L880,520 L970,430 H1240" />
+            </g>
+            {/* Large partial chip outline behind the right column — 0.07 */}
+            <g opacity="0.07">
+              <rect x="730" y="60" width="390" height="300" fill="none" stroke="#B5A642" strokeWidth="1.5" />
+              <rect x="752" y="82" width="346" height="256" fill="none" stroke="#B5A642" strokeWidth="1" />
+              <g stroke="#B5A642" strokeWidth="2">
+                <line x1="780" y1="60" x2="780" y2="42" />
+                <line x1="860" y1="60" x2="860" y2="42" />
+                <line x1="940" y1="60" x2="940" y2="42" />
+                <line x1="1020" y1="60" x2="1020" y2="42" />
+                <line x1="780" y1="360" x2="780" y2="378" />
+                <line x1="860" y1="360" x2="860" y2="378" />
+                <line x1="940" y1="360" x2="940" y2="378" />
+                <line x1="1020" y1="360" x2="1020" y2="378" />
+                <line x1="730" y1="130" x2="712" y2="130" />
+                <line x1="730" y1="220" x2="712" y2="220" />
+                <line x1="730" y1="310" x2="712" y2="310" />
+                <line x1="1120" y1="130" x2="1138" y2="130" />
+                <line x1="1120" y1="220" x2="1138" y2="220" />
+                <line x1="1120" y1="310" x2="1138" y2="310" />
+              </g>
+            </g>
+            {/* Circle nodes: left ones 0.04, right ones 0.07 */}
+            <g fill="#B87333" opacity="0.04">
+              <circle cx="300" cy="120" r="4" />
+              <circle cx="640" cy="200" r="4" />
+              <circle cx="240" cy="420" r="4" />
+              <circle cx="120" cy="480" r="4" />
+            </g>
+            <g fill="#B87333" opacity="0.07">
+              <circle cx="860" cy="200" r="4" />
+              <circle cx="700" cy="430" r="4" />
+              <circle cx="1120" cy="250" r="4" />
+              <circle cx="980" cy="430" r="4" />
+            </g>
+            {/* Tiny plus marks, scattered */}
+            <g stroke="#B5A642" strokeWidth="1.5" opacity="0.05">
+              <path d="M180,300 h12 M186,294 v12" />
+              <path d="M520,140 h12 M526,134 v12" />
+              <path d="M1010,480 h12 M1016,474 v12" />
+              <path d="M660,500 h12 M666,494 v12" />
+              <path d="M1080,120 h12 M1086,114 v12" />
+            </g>
+          </svg>
+          <div className="relative z-[1] grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-center">
             {/* LEFT — badge, headline, story, buttons */}
             <div>
               <p>
