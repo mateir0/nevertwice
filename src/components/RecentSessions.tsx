@@ -13,21 +13,21 @@ function formatDate(ts: number): string {
   return d.toLocaleDateString([], { month: "short", day: "numeric" }).toUpperCase() + ` ${time}`;
 }
 
-function accColor(acc: number): string {
-  if (acc >= 70) return "#165B45";
-  if (acc >= 40) return "#FFD700";
-  return "#B3402E";
+function accStyle(acc: number): { backgroundColor: string; color: string } {
+  if (acc >= 70) return { backgroundColor: "#165B45", color: "#FFFDF7" };
+  if (acc >= 40) return { backgroundColor: "#B87333", color: "#FFFDF7" };
+  return { backgroundColor: "#B3402E", color: "#FFFDF7" };
 }
 
 export function RecentSessions({ sessions }: { sessions: Session[] }) {
   if (sessions.length === 0) {
     return (
       <section aria-label="Recent sessions" className="card">
-        <h2 className="font-display flex items-center gap-2 text-xl font-bold tracking-wide">
+        <h2 className="font-display flex items-center gap-2 text-xl font-bold tracking-wide text-ink">
           <History className="h-5 w-5 text-copper" aria-hidden="true" />
           RECENT SESSIONS
         </h2>
-        <p className="mt-2 font-mono text-sm text-cream-dim">
+        <p className="mt-2 font-mono text-sm text-ink/70">
           NO SESSIONS YET — HIT BEGIN ABOVE.
         </p>
       </section>
@@ -36,27 +36,28 @@ export function RecentSessions({ sessions }: { sessions: Session[] }) {
 
   return (
     <section aria-label="Recent sessions" className="card">
-      <h2 className="font-display flex items-center gap-2 text-xl font-bold tracking-wide">
+      <h2 className="font-display flex items-center gap-2 text-xl font-bold tracking-wide text-ink">
         <History className="h-5 w-5 text-copper" aria-hidden="true" />
         RECENT SESSIONS
       </h2>
       <ul className="mt-3 space-y-2">
         {sessions.slice(0, 5).map((s) => {
           const acc = s.questionsAttempted > 0 ? Math.round((s.correct / s.questionsAttempted) * 100) : 0;
+          const badge = accStyle(acc);
           return (
             <li
               key={s.id}
-              className="copper-border flex items-center justify-between gap-3 bg-pcb-panel p-3"
+              className="copper-border flex items-center justify-between gap-3 bg-parchment p-3"
             >
               <div className="min-w-0">
-                <p className="truncate font-mono text-xs text-cream-dim">{formatDate(s.date)}</p>
-                <p className="font-mono text-sm text-cream">
+                <p className="truncate font-mono text-xs text-ink/70">{formatDate(s.date)}</p>
+                <p className="font-mono text-sm text-ink">
                   {s.correct}/{s.questionsAttempted} • {acc}% • {s.mistakes.length} ERR
                 </p>
               </div>
               <span
                 className="font-display rounded-md px-2 py-1 text-lg font-bold"
-                style={{ backgroundColor: accColor(acc), color: acc >= 40 ? "#0B2E22" : "#EAD0AC" }}
+                style={badge}
               >
                 {acc}%
               </span>

@@ -1,12 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  /* ---- PCB Schematic Architecture palette (DESIGN.md, exact) ---- */
-  --color-pcb: #0F3B2C;
-  --color-pcb-deep: #0B2E22;
-  --color-pcb-panel: #12402F;
-  --color-cream: #EAD0AC;
-  --color-cream-dim: #C9AE85;
+  /* ---- PCB Schematic Architecture — Warm Light palette (DESIGN.md, exact) ---- */
+  --color-parchment: #F7F1E3;
+  --color-vellum: #FFFDF7;
+  --color-ink: #3A2E22;
   --color-accent: #D98C53;
   --color-accent-dark: #C07640;
   --color-copper: #B87333;
@@ -29,17 +27,7 @@
   50% { opacity: 0.35; }
 }
 
-/* ---- PCB Schematic Architecture custom utilities ---- */
-
-@utility pcb-texture {
-  background-color: var(--color-pcb);
-  background-image:
-    radial-gradient(circle at 12% 18%, rgba(22, 91, 69, 0.35) 0, transparent 42%),
-    radial-gradient(circle at 88% 82%, rgba(22, 91, 69, 0.28) 0, transparent 46%),
-    linear-gradient(rgba(234, 208, 172, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(234, 208, 172, 0.045) 1px, transparent 1px);
-  background-size: auto, auto, 28px 28px, 28px 28px;
-}
+/* ---- Warm Light custom utilities (no gradients anywhere) ---- */
 
 @utility copper-border {
   border: 1px solid var(--color-copper);
@@ -47,7 +35,7 @@
 }
 
 @utility trace-divider-line {
-  background: linear-gradient(90deg, var(--color-copper), var(--color-accent), var(--color-copper));
+  background-color: var(--color-copper);
   height: 2px;
   border-radius: 2px;
 }
@@ -62,8 +50,8 @@
 
 @layer base {
   html {
-    background-color: var(--color-pcb);
-    color: var(--color-cream);
+    background-color: var(--color-parchment);
+    color: var(--color-ink);
     font-family: var(--font-mono);
     font-size: 16px;
     line-height: 1.6;
@@ -71,8 +59,8 @@
 
   body {
     min-height: 100dvh;
-    background-color: var(--color-pcb);
-    color: var(--color-cream);
+    background-color: var(--color-parchment);
+    color: var(--color-ink);
     font-family: var(--font-mono);
     font-size: 1rem;
     line-height: 1.6;
@@ -82,12 +70,12 @@
     font-family: var(--font-display);
     font-weight: 700;
     letter-spacing: 0.02em;
-    color: var(--color-cream);
+    color: var(--color-ink);
   }
 
   ::selection {
     background-color: var(--color-gold);
-    color: var(--color-pcb-deep);
+    color: var(--color-ink);
   }
 }
 
@@ -96,15 +84,15 @@
     @apply px-6 py-3 font-bold uppercase tracking-wider transition-all duration-200;
     font-family: var(--font-display);
     background-color: var(--color-accent);
-    color: var(--color-pcb-deep);
+    color: var(--color-vellum);
     border: 1.5px solid var(--color-accent);
     border-radius: 0.5rem;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 12px rgba(58, 46, 34, 0.08);
   }
   .btn-primary:hover {
     background-color: var(--color-accent-dark);
     border-color: var(--color-accent-dark);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 4px 16px rgba(58, 46, 34, 0.12);
   }
   .btn-primary:active {
     transform: translateY(1px);
@@ -116,12 +104,12 @@
     font-family: var(--font-display);
     background-color: transparent;
     border: 1.5px solid var(--color-copper);
-    color: var(--color-cream);
+    color: var(--color-ink);
     border-radius: 0.5rem;
   }
   .btn-secondary:hover {
-    background-color: rgba(184, 115, 51, 0.14);
-    border-color: var(--color-accent);
+    background-color: rgba(184, 115, 51, 0.1);
+    border-color: var(--color-copper);
   }
   .btn-secondary:active {
     transform: translateY(1px);
@@ -132,31 +120,31 @@
     font-family: var(--font-display);
     background-color: transparent;
     border: 1.5px solid var(--color-brick);
-    color: var(--color-cream);
+    color: var(--color-ink);
     border-radius: 0.5rem;
   }
   .btn-danger:hover {
-    background-color: rgba(179, 64, 46, 0.16);
+    background-color: rgba(179, 64, 46, 0.08);
   }
   .btn-danger:active {
     transform: translateY(1px);
   }
 
   .card {
-    background-color: var(--color-pcb-deep);
+    background-color: var(--color-vellum);
     border: 1px solid var(--color-copper);
     border-radius: 0.5rem;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 12px rgba(58, 46, 34, 0.08);
     @apply p-4;
   }
 
   .input-field {
     @apply w-full px-4 py-3;
     font-family: var(--font-mono);
-    background-color: var(--color-pcb-deep);
+    background-color: var(--color-vellum);
     border: 1px solid var(--color-copper);
     border-radius: 0.5rem;
-    color: var(--color-cream);
+    color: var(--color-ink);
   }
   .input-field:focus {
     outline: none;
@@ -171,7 +159,7 @@
     background-color: transparent;
     border: 1.5px solid var(--color-copper);
     border-radius: 0.5rem;
-    color: var(--color-cream);
+    color: var(--color-ink);
   }
   .chip:hover {
     border-color: var(--color-accent);
@@ -183,6 +171,6 @@
     font-size: 0.875rem;
     font-weight: 500;
     letter-spacing: 0.08em;
-    color: var(--color-cream-dim);
+    color: var(--color-copper);
   }
 }

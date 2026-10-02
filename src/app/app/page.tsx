@@ -13,8 +13,8 @@ export default function AppDashboard() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8">
-      <header className="copper-border reveal mb-6 flex items-center justify-between gap-3 bg-pcb-deep px-4 py-2.5">
-        <Link href="/" className="font-display text-lg font-bold tracking-wide text-cream">
+      <header className="copper-border reveal mb-6 flex items-center justify-between gap-3 bg-vellum px-4 py-2.5">
+        <Link href="/" className="font-display text-lg font-bold tracking-wide text-ink">
           ← NEVERTWICE
         </Link>
         <span className="label">
@@ -35,10 +35,10 @@ export default function AppDashboard() {
             <p className="label">
               YOUR NEXT 15 MINUTES
             </p>
-            <p className="font-display mt-1 text-2xl font-bold tracking-wide text-cream">
+            <p className="font-display mt-1 text-2xl font-bold tracking-wide text-ink">
               20 QUESTIONS • 18 MINUTES • PACED
             </p>
-            <p className="mt-1 font-mono text-sm text-cream-dim">
+            <p className="mt-1 font-mono text-sm text-ink/70">
               One question at a time. Wrong answers get classified so the heatmap learns.
             </p>
             <Link href="/session" className="btn-primary mt-4 flex items-center justify-center gap-2 text-center text-lg">
@@ -57,7 +57,7 @@ export default function AppDashboard() {
         <div className="space-y-5">
           <RecentSessions sessions={sessions} />
           <section aria-label="NET format reminder" className="card">
-            <h2 className="font-display flex items-center gap-2 text-xl font-bold tracking-wide text-cream">
+            <h2 className="font-display flex items-center gap-2 text-xl font-bold tracking-wide text-ink">
               <Timer className="h-5 w-5 text-copper" aria-hidden="true" />
               NET FORMAT
             </h2>
@@ -68,9 +68,9 @@ export default function AppDashboard() {
                 { v: "~54s", l: "PER Q" },
                 { v: "0", l: "NEG. MARK" },
               ].map((s) => (
-                <div key={s.l} className="copper-border bg-pcb-panel p-3 text-center">
-                  <p className="font-display text-2xl font-bold text-gold">{s.v}</p>
-                  <p className="label mt-1 text-[10px]">{s.l}</p>
+                <div key={s.l} className="copper-border bg-parchment p-3 text-center">
+                  <p className="font-display text-2xl font-bold text-copper">{s.v}</p>
+                  <p className="label mt-1 text-[10px] text-ink">{s.l}</p>
                 </div>
               ))}
             </div>
@@ -79,7 +79,7 @@ export default function AppDashboard() {
       </main>
 
       <footer className="mt-8 text-center">
-        <p className="label">
+        <p className="label text-ink">
           BUILT SO HE NEVER LOSES THE SAME MARK TWICE
         </p>
       </footer>

@@ -12,7 +12,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0F3B2C",
+  themeColor: "#F7F1E3",
 };
 
 export default function RootLayout({
@@ -22,7 +22,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="pcb-texture min-h-[100dvh] font-mono text-cream antialiased">
+      <body className="min-h-[100dvh] bg-parchment font-mono text-ink antialiased">
         {children}
       </body>
     </html>

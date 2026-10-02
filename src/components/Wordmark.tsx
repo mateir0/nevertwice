@@ -6,15 +6,15 @@ interface WordmarkProps {
 }
 
 /**
- * NEVERTWICE wordmark — PCB edition.
- * Cream Courier New 700 with a copper trace rule and gold via.
+ * NEVERTWICE wordmark — Warm Light edition.
+ * Dark brown Courier New 700 with a copper trace rule and gold via.
  * Single treatment, never two-tone.
  */
 export function Wordmark({ size = "clamp(2.5rem, 5vw, 4rem)", align = "center" }: WordmarkProps) {
   return (
     <div className={align === "center" ? "text-center" : "text-left"}>
       <h1
-        className="font-display font-bold tracking-wide text-cream"
+        className="font-display font-bold tracking-wide text-ink"
         style={{ fontSize: size, lineHeight: 1 }}
       >
         NEVERTWICE

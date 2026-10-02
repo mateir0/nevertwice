@@ -21,19 +21,19 @@ interface TraceStyle {
   borderColor: string;
 }
 
-/** Copper/gold traces light up where weaknesses are, trace green where mastered. */
+/** Copper/gold traces light up where weaknesses leak, trace green where mastered. */
 function traceStyle(count: number, max: number): TraceStyle {
   if (count <= 0) {
-    return { backgroundColor: "#165B45", color: "#EAD0AC", borderColor: "#165B45" };
+    return { backgroundColor: "#165B45", color: "#FFFDF7", borderColor: "#165B45" };
   }
   const t = max > 0 ? Math.min(count / max, 1) : 1;
   if (t > 0.66) {
-    return { backgroundColor: "#FFD700", color: "#0B2E22", borderColor: "#FFD700" };
+    return { backgroundColor: "#FFD700", color: "#3A2E22", borderColor: "#B87333" };
   }
   if (t > 0.33) {
-    return { backgroundColor: "#D98C53", color: "#0B2E22", borderColor: "#D98C53" };
+    return { backgroundColor: "#D98C53", color: "#3A2E22", borderColor: "#B87333" };
   }
-  return { backgroundColor: "#B87333", color: "#0B2E22", borderColor: "#B87333" };
+  return { backgroundColor: "#B87333", color: "#FFFDF7", borderColor: "#B87333" };
 }
 
 function trendGlyph(trend: WeaknessNode["trend"]): string {
@@ -54,15 +54,15 @@ export function WeaknessHeatmap({
     return (
       <section aria-label={title} className="card">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="font-display text-xl font-bold tracking-wide text-cream">{title}</h2>
-          <span className="rounded-full border border-copper bg-pcb-panel px-2 py-1 font-mono text-[11px] tracking-widest text-accent">
+          <h2 className="font-display text-xl font-bold tracking-wide text-ink">{title}</h2>
+          <span className="rounded-full border border-copper bg-parchment px-2 py-1 font-mono text-[11px] tracking-widest text-copper">
             REV A
           </span>
         </div>
-        <div className="copper-border flex flex-col items-center bg-pcb-panel px-4 py-8 text-center">
+        <div className="copper-border flex flex-col items-center bg-parchment px-4 py-8 text-center">
           <CircuitBoard className="h-10 w-10 text-copper" strokeWidth={1.5} aria-hidden="true" />
-          <p className="font-display mt-3 text-xl font-bold tracking-wide text-cream">BOARD UNPOPULATED</p>
-          <p className="mt-2 max-w-[52ch] font-mono text-sm leading-relaxed text-cream-dim">
+          <p className="font-display mt-3 text-xl font-bold tracking-wide text-ink">BOARD UNPOPULATED</p>
+          <p className="mt-2 max-w-[52ch] font-mono text-sm leading-relaxed text-ink/70">
             No nodes routed yet. Complete a session and every classified mistake solders a new trace onto this board.
           </p>
           <Link href={emptyAction.href} className="btn-primary mt-5 text-base">
@@ -93,10 +93,10 @@ export function WeaknessHeatmap({
   return (
     <section aria-label={title} className="card">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-xl font-bold tracking-wide text-cream">{title}</h2>
-        <div className="flex items-center gap-3 font-mono text-[11px] text-cream-dim">
+        <h2 className="font-display text-xl font-bold tracking-wide text-ink">{title}</h2>
+        <div className="flex items-center gap-3 font-mono text-[11px] text-ink/70">
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-gold" />
+            <span className="inline-block h-2.5 w-2.5 rounded-full border border-copper bg-gold" />
             FAULT
           </span>
           <span className="flex items-center gap-1.5">
@@ -110,7 +110,7 @@ export function WeaknessHeatmap({
         </div>
       </div>
 
-      <div className="copper-border space-y-5 bg-pcb-panel p-3 sm:p-4" role="list" aria-label="Weakness circuit">
+      <div className="copper-border space-y-5 bg-parchment p-3 sm:p-4" role="list" aria-label="Weakness circuit">
         {ordered.map((g) => (
           <div key={g.topic}>
             {/* Net header: via + topic label + routed trace */}
@@ -120,9 +120,9 @@ export function WeaknessHeatmap({
                 className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: g.heat > 0 ? "#FFD700" : "#165B45" }}
               />
-              <span className="font-display text-base font-bold tracking-wide text-cream">{g.topic.toUpperCase()}</span>
+              <span className="font-display text-base font-bold tracking-wide text-ink">{g.topic.toUpperCase()}</span>
               <span aria-hidden="true" className="trace-divider-line min-w-4 flex-1" />
-              <span className="font-mono text-[11px] text-cream-dim">
+              <span className="font-mono text-[11px] text-ink/70">
                 {g.heat} FAULT{g.heat === 1 ? "" : "S"}
               </span>
             </div>
@@ -144,7 +144,7 @@ export function WeaknessHeatmap({
                     style={{
                       backgroundColor: s.backgroundColor,
                       border: `1.5px solid ${s.borderColor}`,
-                      outline: isNew ? "2px solid #FFD700" : "none",
+                      outline: isNew ? "2px solid #B87333" : "none",
                       outlineOffset: "2px",
                     }}
                   >
@@ -163,7 +163,7 @@ export function WeaknessHeatmap({
                       <span className="font-mono text-[10px] leading-tight">
                         {node.mistakeCount} ERR • {trendGlyph(node.trend)}
                       </span>
-                      {isNew && <span className="via-live mt-1 inline-block h-1.5 w-1.5 rounded-full bg-gold" />}
+                      {isNew && <span className="via-live mt-1 inline-block h-1.5 w-1.5 rounded-full bg-copper" />}
                     </div>
                   </div>
                 );
@@ -172,7 +172,7 @@ export function WeaknessHeatmap({
           </div>
         ))}
       </div>
-      <p className="mt-3 font-mono text-[11px] text-cream-dim">
+      <p className="mt-3 font-mono text-[11px] text-ink/70">
         {nodes.length} NODES ROUTED • MAX {max} FAULTS
       </p>
     </section>
