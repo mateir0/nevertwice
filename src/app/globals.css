@@ -1,0 +1,178 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=VT323&display=swap');
+
+@theme {
+  --color-charcoal: #333333;
+  --color-charcoal-light: #3d3d3d;
+  --color-charcoal-dark: #2a2a2a;
+  --color-crt-green: #33FF00;
+  --color-crt-green-dim: #26cc00;
+  --color-phosphor-amber: #FFB000;
+  --color-phosphor-amber-dim: #cc8d00;
+  --color-tape-red: #CC0000;
+  --color-tape-red-dim: #990000;
+  --color-terminal-bg: #1a1a1a;
+  --color-terminal-border: #444444;
+  --color-static-grey: #999999;
+  --color-warm-beige: #D2B48C;
+  --color-off-white: #E8E0D0;
+  --color-deep-navy: #1B2838;
+
+  --font-display: "VT323", monospace;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+@keyframes scan-drift {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 120px; }
+}
+
+@keyframes crt-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.96; }
+}
+
+@keyframes heat-pop {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Cassette Futurism custom utilities (must be @utility so @apply resolves) ---- */
+
+@utility scanlines {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.16) 0px,
+      rgba(0, 0, 0, 0.16) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    animation: scan-drift 8s linear infinite;
+    z-index: 40;
+  }
+}
+
+@utility crt-glow {
+  box-shadow:
+    0 0 20px rgba(51, 255, 0, 0.15),
+    0 0 40px rgba(51, 255, 0, 0.05),
+    inset 0 0 20px rgba(51, 255, 0, 0.05);
+}
+
+@utility phosphor-glow {
+  box-shadow:
+    0 0 20px rgba(255, 176, 0, 0.2),
+    0 0 40px rgba(255, 176, 0, 0.08),
+    inset 0 0 20px rgba(255, 176, 0, 0.05);
+}
+
+@utility tape-glow {
+  box-shadow:
+    0 0 20px rgba(204, 0, 0, 0.2),
+    0 0 40px rgba(204, 0, 0, 0.08),
+    inset 0 0 20px rgba(204, 0, 0, 0.05);
+}
+
+@utility phosphor-grid {
+  background-image:
+    linear-gradient(rgba(255, 176, 0, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 176, 0, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+@utility terminal-border {
+  border: 1px solid var(--color-terminal-border);
+  border-radius: 0;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-terminal-bg);
+    color: var(--color-crt-green);
+    font-family: var(--font-mono);
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--color-terminal-bg);
+    color: var(--color-crt-green);
+    font-family: var(--font-mono);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: 0.05em;
+  }
+
+  ::selection {
+    background-color: var(--color-phosphor-amber);
+    color: var(--color-terminal-bg);
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply font-display px-6 py-3 bg-transparent border-2 uppercase tracking-wider transition-all duration-200;
+    border-color: var(--color-crt-green);
+    color: var(--color-crt-green);
+    @apply crt-glow;
+  }
+  .btn-primary:hover {
+    background-color: var(--color-crt-green);
+    color: var(--color-terminal-bg);
+  }
+
+  .btn-secondary {
+    @apply font-display px-6 py-3 bg-transparent border-2 uppercase tracking-wider transition-all duration-200;
+    border-color: var(--color-phosphor-amber);
+    color: var(--color-phosphor-amber);
+    @apply phosphor-glow;
+  }
+  .btn-secondary:hover {
+    background-color: var(--color-phosphor-amber);
+    color: var(--color-terminal-bg);
+  }
+
+  .btn-danger {
+    @apply font-display px-6 py-3 bg-transparent border-2 uppercase tracking-wider transition-all duration-200;
+    border-color: var(--color-tape-red);
+    color: var(--color-tape-red);
+    @apply tape-glow;
+  }
+  .btn-danger:hover {
+    background-color: var(--color-tape-red);
+    color: var(--color-terminal-bg);
+  }
+
+  .card {
+    background-color: var(--color-charcoal);
+    @apply terminal-border scanlines p-4;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 font-mono;
+    background-color: var(--color-terminal-bg);
+    border: 2px solid var(--color-terminal-border);
+    color: var(--color-crt-green);
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: var(--color-crt-green);
+  }
+
+  .chip {
+    @apply font-display min-h-[56px] px-4 py-3 uppercase tracking-wider transition-all duration-150;
+    background-color: transparent;
+    border: 2px solid var(--color-terminal-border);
+    color: var(--color-crt-green);
+  }
+  .chip:hover {
+    border-color: var(--color-crt-green);
+  }
+}
