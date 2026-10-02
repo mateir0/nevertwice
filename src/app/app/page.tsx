@@ -8,23 +8,52 @@ import { Wordmark } from "@/components/Wordmark";
 import { WeaknessHeatmap } from "@/components/WeaknessHeatmap";
 import { RecentSessions } from "@/components/RecentSessions";
 import { useSessions, useWeaknessNodes } from "@/hooks/useExam";
-import { planDrill, saveActiveDrill, type DrillPlan } from "@/engine/drill-planner";
+import { planDrill, planToGenTargets, saveActiveDrill, type DrillPlan } from "@/engine/drill-planner";
+import { buildDrillQuestions } from "@/engine/question-generator";
+import type { Question } from "@/types";
 
 export default function AppDashboard() {
   const router = useRouter();
   const nodes = useWeaknessNodes();
   const { sessions } = useSessions();
   const [plan, setPlan] = useState<DrillPlan | null>(null);
+  const [drillQuestions, setDrillQuestions] = useState<Question[] | null>(null);
+  const [generating, setGenerating] = useState(false);
 
+  // Scoring is sync and instant: compute the plan on mount / sessions change.
   useEffect(() => {
     setPlan(planDrill());
   }, [sessions]);
 
+  // Question text is async end-to-end (Groq → fallback → shuffle) through
+  // the single buildDrillQuestions pipeline — the same one /results uses.
+  // The fallback delivers instantly when Groq fails or is unconfigured.
+  useEffect(() => {
+    if (!plan) {
+      setDrillQuestions(null);
+      setGenerating(false);
+      return;
+    }
+    let cancelled = false;
+    setGenerating(true);
+    setDrillQuestions(null);
+    buildDrillQuestions(planToGenTargets(plan)).then((qs) => {
+      if (cancelled) return;
+      setDrillQuestions(qs);
+      setGenerating(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [plan]);
+
   function beginDrill(): void {
-    if (!plan) return;
-    saveActiveDrill(plan);
+    if (!plan || !drillQuestions || drillQuestions.length === 0) return;
+    saveActiveDrill({ ...plan, questions: drillQuestions });
     router.push("/session");
   }
+
+  const plannedTotal = plan ? plan.targets.reduce((n, t) => n + t.count, 0) : 0;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8">
@@ -52,7 +81,7 @@ export default function AppDashboard() {
                 YOUR NEXT DRILL
               </p>
               <p className="font-display mt-1 text-2xl tracking-wide text-parchment">
-                {plan.questions.length} QUESTIONS • TARGETED • PACED
+                {plannedTotal} QUESTIONS • TARGETED • PACED
               </p>
               <p className="mt-1 font-display text-[17px] text-parchment/80">
                 {plan.reason}
@@ -60,9 +89,13 @@ export default function AppDashboard() {
               <p className="mt-2 font-type text-xs tracking-widest text-faded">
                 {plan.targets.map((t) => t.subtopic.toUpperCase()).join(" · ")}
               </p>
-              <button onClick={beginDrill} className="btn-primary mt-4 flex w-full items-center justify-center gap-2 text-center text-lg">
+              <button
+                onClick={beginDrill}
+                disabled={generating || !drillQuestions}
+                className="btn-primary mt-4 flex w-full items-center justify-center gap-2 text-center text-lg disabled:cursor-wait disabled:opacity-50"
+              >
                 <Crosshair className="h-5 w-5" aria-hidden="true" />
-                BEGIN DRILL
+                {generating || !drillQuestions ? "GENERATING DRILL…" : "BEGIN DRILL"}
               </button>
             </section>
           ) : (

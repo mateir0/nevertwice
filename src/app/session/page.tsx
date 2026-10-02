@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PacingRing } from "@/components/PacingRing";
-import { ERROR_TYPES, ExamEngine } from "@/engine/exam-engine";
+import { ERROR_TYPES, ExamEngine, TIMEOUT_ANSWER, mistakesFromAnswers, nodeKey } from "@/engine/exam-engine";
 import { clearActiveDrill, loadActiveDrill, type DrillPlan } from "@/engine/drill-planner";
-import type { ErrorType, Question } from "@/types";
+import type { ErrorType, Question, Session } from "@/types";
 import { displayMath } from "@/engine/format-math";
 import { getQuestionsForSession } from "@/config/exams";
 import { nustConfig } from "@/config/exams/nust";
@@ -37,13 +37,76 @@ export default function SessionPage() {
     setSecondsLeft(TOTAL_SECONDS);
   }, [index]);
 
+  function finishWith(answerArr: (number | null)[], errorArr: (ErrorType | null)[]): void {
+    if (!questions) return;
+    setFinishing(true);
+    const now = Date.now();
+    const sessionId = `session-${now}`;
+    const { correct, mistakes } = mistakesFromAnswers(questions, answerArr, errorArr, sessionId, now);
+
+    const session: Session = {
+      id: sessionId,
+      date: now,
+      questionsAttempted: questions.length,
+      correct,
+      mistakes,
+      durationSeconds: Math.max(1, Math.floor((now - startTime) / 1000)),
+      attemptedKeys: questions.map((q) => nodeKey(q.topic, q.subtopic)),
+    };
+
+    ExamEngine.saveSession(session);
+    ExamEngine.saveLastDetail(
+      questions.map((q, qi) => ({
+        questionId: q.id,
+        section: q.section,
+        topic: q.topic,
+        subtopic: q.subtopic,
+        selected: answerArr[qi] ?? null,
+        correctIndex: q.correctIndex,
+        isCorrect: answerArr[qi] === q.correctIndex,
+      })),
+    );
+    ExamEngine.recordSession(session);
+    clearActiveDrill();
+    router.push("/results");
+  }
+
+  function finish(): void {
+    if (finishing || !questions) return;
+    finishWith(answers, errorKinds);
+  }
+
+  function expireCurrent(): void {
+    if (!questions || finishing) return;
+    if (answers[index] !== null) return;
+    // Running out of time IS the classification: file immediately as a
+    // time-pressure mistake (sentinel answer, no classification step).
+    const nextAnswers = [...answers];
+    nextAnswers[index] = TIMEOUT_ANSWER;
+    const nextErrors = [...errorKinds];
+    nextErrors[index] = "time-pressure";
+    setAnswers(nextAnswers);
+    setErrorKinds(nextErrors);
+    if (index >= questions.length - 1) {
+      finishWith(nextAnswers, nextErrors);
+    } else {
+      setIndex((i) => Math.min(i + 1, questions.length - 1));
+    }
+  }
+
+  // The timer runs ONLY while the current question is unanswered. Answering
+  // freezes it; on expiry the question is filed as a time-pressure mistake
+  // and the session auto-advances (auto-finishes on the last question).
   useEffect(() => {
     if (!questions) return;
-    const t = setInterval(() => {
-      setSecondsLeft((s) => (s <= 0 ? 0 : s - 1));
-    }, 1000);
-    return () => clearInterval(t);
-  }, [questions, index]);
+    if (answers[index] !== null) return;
+    if (secondsLeft <= 0) {
+      expireCurrent();
+      return;
+    }
+    const t = setTimeout(() => setSecondsLeft((s) => (s <= 0 ? 0 : s - 1)), 1000);
+    return () => clearTimeout(t);
+  });
 
   const total = questions?.length ?? 0;
   const question = questions?.[index] ?? null;
@@ -53,10 +116,11 @@ export default function SessionPage() {
     [answers, index, questions],
   );
   const isAnswered = selected !== null;
-  const isCorrect = question !== null && isAnswered && selected === question.correctIndex;
-  const isWrong = question !== null && isAnswered && selected !== question.correctIndex;
+  const isTimedOut = selected === TIMEOUT_ANSWER;
+  const isCorrect = question !== null && !isTimedOut && isAnswered && selected === question.correctIndex;
+  const isWrong = question !== null && !isTimedOut && isAnswered && selected !== question.correctIndex;
   const classified = errorKinds[index] ?? null;
-  const canAdvance = isCorrect || (isWrong && classified !== null);
+  const canAdvance = isCorrect || isTimedOut || (isWrong && classified !== null);
   const isLast = index >= total - 1;
 
   if (!questions || !question) {
@@ -85,58 +149,6 @@ export default function SessionPage() {
       next[index] = kind;
       return next;
     });
-  }
-
-  function finish(): void {
-    if (finishing || !questions) return;
-    setFinishing(true);
-    const now = Date.now();
-    const sessionId = `session-${now}`;
-    let correct = 0;
-    const mistakes = questions.flatMap((q, qi) => {
-      const sel = answers[qi];
-      if (sel === null) return [];
-      if (sel === q.correctIndex) {
-        correct += 1;
-        return [];
-      }
-      return [
-        {
-          id: `mistake-${sessionId}-${qi}`,
-          questionId: q.id,
-          topic: q.topic,
-          subtopic: q.subtopic,
-          errorType: (errorKinds[qi] ?? "concept-gap") as ErrorType,
-          timestamp: now,
-          sessionId,
-        },
-      ];
-    });
-
-    const session = {
-      id: sessionId,
-      date: now,
-      questionsAttempted: questions.length,
-      correct,
-      mistakes,
-      durationSeconds: Math.max(1, Math.floor((now - startTime) / 1000)),
-    };
-
-    ExamEngine.saveSession(session);
-    ExamEngine.saveLastDetail(
-      questions.map((q, qi) => ({
-        questionId: q.id,
-        section: q.section,
-        topic: q.topic,
-        subtopic: q.subtopic,
-        selected: answers[qi] ?? null,
-        correctIndex: q.correctIndex,
-        isCorrect: answers[qi] === q.correctIndex,
-      })),
-    );
-    ExamEngine.recordSession(session);
-    clearActiveDrill();
-    router.push("/results");
   }
 
   return (
@@ -213,6 +225,12 @@ export default function SessionPage() {
               );
             })}
           </div>
+
+          {isTimedOut && (
+            <p className="mt-5 border-t border-bronze pt-4 font-type text-sm font-bold tracking-wide text-blood" role="alert">
+              <span className="rounded bg-blood px-2 py-0.5 font-type text-sm font-bold text-parchment">TIME UP</span> — FILED AS TIME-PRESSURE. ADVANCE WHEN READY.
+            </p>
+          )}
 
           {isWrong && (
             <div className="mt-5 border-t border-bronze pt-4" role="group" aria-label="Classify the error">

@@ -22,6 +22,13 @@ export interface Session {
   correct: number;
   mistakes: Mistake[];
   durationSeconds: number;
+  /**
+   * "topic::subtopic" keys for every question shown in the session.
+   * Drives scoped decay in recordSession: only attempted subtopics may
+   * decay. Absent on legacy sessions (pre-decay-scoping) — those skip
+   * decay entirely rather than guessing.
+   */
+  attemptedKeys?: string[];
 }
 
 export type WeaknessTrend = "rising" | "stable" | "falling";

@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { WeaknessHeatmap } from "@/components/WeaknessHeatmap";
 import { ERROR_TYPES, ExamEngine } from "@/engine/exam-engine";
-import { planDrill, type DrillPlan } from "@/engine/drill-planner";
-import type { ErrorType, Session } from "@/types";
+import { planDrill, planToGenTargets, saveActiveDrill, type DrillPlan } from "@/engine/drill-planner";
+import { buildDrillQuestions } from "@/engine/question-generator";
+import type { ErrorType, Question, Session } from "@/types";
 
 function formatDuration(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
@@ -18,9 +20,12 @@ function errorLabel(v: ErrorType): string {
 }
 
 export default function ResultsPage() {
+  const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [nodes, setNodes] = useState(ExamEngine.getWeaknessNodes());
   const [nextPlan, setNextPlan] = useState<DrillPlan | null>(null);
+  const [nextQuestions, setNextQuestions] = useState<Question[] | null>(null);
+  const [nextGenerating, setNextGenerating] = useState(false);
 
   useEffect(() => {
     const sessions = ExamEngine.getSessions();
@@ -28,6 +33,33 @@ export default function ResultsPage() {
     setNodes(ExamEngine.getWeaknessNodes());
     setNextPlan(planDrill());
   }, []);
+
+  // Same async pipeline as /app: Groq → fallback → shuffle. The button
+  // stays disabled ("GENERATING DRILL…") until questions arrive.
+  useEffect(() => {
+    if (!nextPlan) {
+      setNextQuestions(null);
+      setNextGenerating(false);
+      return;
+    }
+    let cancelled = false;
+    setNextGenerating(true);
+    setNextQuestions(null);
+    buildDrillQuestions(planToGenTargets(nextPlan)).then((qs) => {
+      if (cancelled) return;
+      setNextQuestions(qs);
+      setNextGenerating(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [nextPlan]);
+
+  function beginNextDrill(): void {
+    if (!nextPlan || !nextQuestions || nextQuestions.length === 0) return;
+    saveActiveDrill({ ...nextPlan, questions: nextQuestions });
+    router.push("/session");
+  }
 
   const detail = useMemo(() => ExamEngine.loadLastDetail(), [session]);
 
@@ -166,12 +198,19 @@ export default function ResultsPage() {
               NEXT TARGET FILED
             </p>
             <p className="font-display mt-1 text-2xl tracking-wide text-parchment">
-              {nextPlan.questions.length} QUESTIONS • TARGETED
+              {nextPlan.targets.reduce((n, t) => n + t.count, 0)} QUESTIONS • TARGETED
             </p>
             <p className="mt-1 font-display text-[17px] text-parchment/80">
               {nextPlan.reason}
             </p>
-            <Link href="/app" className="btn-primary mt-4 block text-center">
+            <button
+              onClick={beginNextDrill}
+              disabled={nextGenerating || !nextQuestions}
+              className="btn-primary mt-4 block w-full text-center disabled:cursor-wait disabled:opacity-50"
+            >
+              {nextGenerating || !nextQuestions ? "GENERATING DRILL…" : "FILE & BEGIN DRILL"}
+            </button>
+            <Link href="/app" className="btn-secondary mt-2 block text-center">
               BACK TO APP
             </Link>
           </section>

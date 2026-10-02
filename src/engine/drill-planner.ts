@@ -1,25 +1,29 @@
 import { ExamEngine } from "./exam-engine";
-import { buildDrillFallback, shuffleOptions, type DrillGenTarget } from "./question-generator";
+import type { DrillGenTarget } from "./question-generator";
 import type { ErrorType, Question, WeaknessNode } from "@/types";
 
 /**
  * The drill engine scorer: mistakes → weakness graph → targeted drill.
  * planDrill() scores every weakness node as
  *   mistakeCount × recency × errorSeverity
- * and builds a 5–8 question drill weighted toward the hottest nodes.
- * Synchronous and offline: question text comes from the deterministic
- * local fallback so the loop never needs the network.
+ * and picks targets for a 5–8 question drill weighted toward the hottest
+ * nodes. Synchronous, offline, and question-free: it returns scoring
+ * (targets + reason) only. Question text is built separately via the
+ * async buildDrillQuestions() pipeline (Groq → fallback → shuffle), so
+ * the planner itself never touches the network and never emits questions.
  *
- * Every drill's question set is fully assembled (including an unbiased
- * Fisher-Yates option shuffle via shuffleOptions) BEFORE it is stored as
- * the active drill, so loadActiveDrill() can hand out pre-shuffled,
- * deduped questions without any further processing.
+ * Callers (/app, /results) MUST attach questions before saving:
+ *   const plan = planDrill();
+ *   const questions = await buildDrillQuestions(plan.targets);
+ *   saveActiveDrill({ ...plan, questions });
  */
 
 export interface DrillTarget {
   topic: string;
   subtopic: string;
   score: number;
+  errorType: ErrorType;
+  count: number;
 }
 
 export interface DrillPlan {
@@ -27,6 +31,7 @@ export interface DrillPlan {
   createdAt: number;
   targets: DrillTarget[];
   reason: string;
+  /** Empty until the caller fills it via buildDrillQuestions(). */
   questions: Question[];
 }
 
@@ -127,9 +132,19 @@ function buildReason(top: Scored, total: number): string {
   return `${top.node.subtopic} keeps bleeding — ${top.count} ${noun} in ${top.spanDays} ${dayWord}. ${total} questions engineered to ${verb}.`;
 }
 
+/** Convert plan targets into generator targets for buildDrillQuestions(). */
+export function planToGenTargets(plan: DrillPlan): DrillGenTarget[] {
+  return plan.targets.map((t) => ({
+    topic: t.topic,
+    subtopic: t.subtopic,
+    errorType: t.errorType,
+    count: t.count,
+  }));
+}
+
 /**
- * Score the weakness graph and return a targeted drill plan,
- * or null when the graph is empty (fresh user).
+ * Score the weakness graph and return a targeted drill plan (scoring
+ * only — questions: []), or null when the graph is empty (fresh user).
  */
 export function planDrill(now: number = Date.now()): DrillPlan | null {
   const nodes = ExamEngine.getWeaknessNodes();
@@ -143,20 +158,20 @@ export function planDrill(now: number = Date.now()): DrillPlan | null {
   const total = picked.length === 1 ? 6 : picked.length === 2 ? 7 : 8;
   const counts = allocateCounts(picked, total);
 
-  const genTargets: DrillGenTarget[] = picked.map((s, i) => ({
+  const targets: DrillTarget[] = picked.map((s, i) => ({
     topic: s.node.topic,
     subtopic: s.node.subtopic,
+    score: s.score,
     errorType: s.errorType,
     count: counts[i],
   }));
-  const questions = buildDrillFallback(genTargets).map(shuffleOptions);
 
   return {
     id: `drill-${now}`,
     createdAt: now,
-    targets: picked.map((s) => ({ topic: s.node.topic, subtopic: s.node.subtopic, score: s.score })),
-    reason: buildReason(picked[0], questions.length),
-    questions,
+    targets,
+    reason: buildReason(picked[0], total),
+    questions: [],
   };
 }
 

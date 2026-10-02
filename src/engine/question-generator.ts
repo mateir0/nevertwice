@@ -1,5 +1,5 @@
 import type { ErrorType, Question } from "@/types";
-import { nustSeedQuestions } from "@/config/exams/nust";
+import { getRecentQuestionIds, nustSeedQuestions } from "@/config/exams/nust";
 import { sanitizeStem } from "@/engine/format-math";
 
 /**
@@ -9,7 +9,8 @@ import { sanitizeStem } from "@/engine/format-math";
  * Biased sort-based shuffles (Array.sort(() => Math.random() - 0.5))
  * are forbidden project-wide for option shuffling — this is the only
  * approved path. Applied to EVERY question at session/drill assembly
- * time, both the seed-bank session path and the drill path.
+ * time, on BOTH paths (Groq items via assignToSlots, seeds via the
+ * deterministic fallback).
  */
 export function shuffleOptions(question: Question): Question {
   const options = [...question.options];
@@ -84,6 +85,7 @@ export function buildDrillPrompt(targets: DrillGenTarget[]): string {
     "STRICT OUTPUT CONTRACT. Respond with ONLY a raw JSON array, no markdown, no code fences, no commentary.",
     "Each element must be exactly: {\"text\": string, \"options\": [4 distinct strings], \"correctIndex\": 0|1|2|3}.",
     "Every question needs exactly 4 options and exactly one correct answer.",
+    "Distribute the correct answer uniformly across positions 0–3 — do not cluster it on one letter.",
     "Write each question as a real exam stem. Never prefix with 'Drill', 'Practice', or topic names.",
     "Use Unicode math notation directly — superscripts (x², x³), √, π, θ, ×, ÷, ±, →, ∞. Never caret notation, LaTeX, backslashes, or \\( \\) delimiters.",
   ].join("\n");
@@ -100,200 +102,95 @@ export function parseStrictDrillJson(raw: string): RawGenerated[] {
     if (typeof item !== "object" || item === null) throw new Error(`item ${i} not an object`);
     const rec = item as Record<string, unknown>;
     if (typeof rec.text !== "string" || rec.text.trim().length === 0) throw new Error(`item ${i} bad text`);
-    if (!Array.isArray(rec.options) || rec.options.length !== 4 || !rec.options.every((o) => typeof o === "string" && o.trim().length > 0)) {
+    if (!Array.isArray(rec.options) || rec.options.length !== 4 || !rec.options.every((o) => typeof o === "string" && (o as string).trim().length > 0)) {
       throw new Error(`item ${i} bad options`);
     }
     if (!Number.isInteger(rec.correctIndex) || (rec.correctIndex as number) < 0 || (rec.correctIndex as number) > 3) {
       throw new Error(`item ${i} bad correctIndex`);
     }
-    return { text: (rec.text as string).trim(), options: (rec.options as string[]).map((o) => o.trim()), correctIndex: rec.correctIndex as number };
+    const options = (rec.options as string[]).map((o) => o.trim());
+    // Distinctness is load-bearing: duplicate option strings make
+    // shuffleOptions' indexOf remap ambiguous and can silently move the
+    // key onto a distractor. Reject the whole item instead.
+    const seen = new Set(options.map((o) => o.toLowerCase().replace(/\s+/g, " ").trim()));
+    if (seen.size !== 4) throw new Error(`item ${i} duplicate options`);
+    return { text: (rec.text as string).trim(), options, correctIndex: rec.correctIndex as number };
   });
 }
 
 // ---------- deterministic fallback (zero network) ----------
 
-function hashString(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "drill";
 }
 
-function stripSeedPrefix(text: string): string {
-  return text
-    .replace(/^Stand-in drill Q\d+\s*—\s*/, "")
-    .replace(/^\s*Practice drill:\s*/i, "")
-    .trim() || text;
-}
-
 /**
- * Template-built drill questions derived from the seed bank.
+ * Template-free deterministic drill fallback.
+ *
+ * Emits seed-bank questions VERBATIM (sanitized + deduped by normalized
+ * text only). Numbers inside stems are NEVER rewritten: varying a stem
+ * while keeping the original options/correctIndex produces mathematically
+ * false answer keys, which destroys trust. A verbatim repeat when the
+ * pool is exhausted is acceptable degradation — an repeated question
+ * annoys; a wrong key mis-trains.
  *
  * Dedup rules (zero-network fallback):
- *  - Track emitted question TEXTS (normalized: lowercase, whitespace
- *    collapsed) for the duration of this single drill build.
- *  - Never emit the same normalized text twice within one drill.
- *  - Before any text reuse, vary the numbers/values inside the template
- *    so the emitted text is materially different.
- *  - After dedup/wear, apply shuffleOptions() so option order is unbiased
- *    and correctIndex stays correct.
- *
- * Same targets always yield the same set (deterministic multipliers),
- * but no text repeats within a drill.
+ *  - Track emitted question TEXTS (normalized) for this single drill build.
+ *  - Never emit the same normalized text twice within one drill UNTIL the
+ *    eligible pool is exhausted; then cycle verbatim repeats.
+ *  - Prefer seeds unseen in the last 3 sessions when the pool allows it.
+ *  - Apply shuffleOptions() to every emitted question so option order is
+ *    unbiased and correctIndex stays correct.
  */
 export function buildDrillFallback(targets: DrillGenTarget[]): Question[] {
   const out: Question[] = [];
   const emitted = new Set<string>();
+  let recent: Set<string>;
+  try {
+    recent = new Set(getRecentQuestionIds());
+  } catch {
+    recent = new Set();
+  }
 
   targets.forEach((t, ti) => {
     const sameSub = nustSeedQuestions.filter((q) => q.topic === t.topic && q.subtopic === t.subtopic);
     const sameTopic = nustSeedQuestions.filter((q) => q.topic === t.topic);
     const pool = sameSub.length > 0 ? sameSub : sameTopic.length > 0 ? sameTopic : nustSeedQuestions;
+    // Freshness preference: skip bank questions dealt in the last 3
+    // sessions unless that would empty the pool.
+    const unrecent = pool.filter((q) => !recent.has(q.id));
+    const eligible = unrecent.length > 0 ? unrecent : pool;
 
     for (let k = 0; k < Math.max(0, t.count); k++) {
-      // Walk the pool cyclically, skipping any seed whose current
-      // emitted text already exists in this drill.
-      const base = pickDedupedSeed(pool, emitted, t, k, ti);
-      const stem = sanitizeStem(stripSeedPrefix(base.text));
-      const text = varyStem(stem, t.topic, t.subtopic, k, ti);
-
-      // Safety valve: if every pool entry would repeat, perturb the
-      // last candidate's numbers instead of emitting a duplicate.
-      const normalized = normalizeText(text);
-      if (emitted.has(normalized)) {
-        const last = pool[(k + ti) % pool.length];
-        const perturbedStem = perturbStem(stripSeedPrefix(last.text), k, ti);
-        out.push(
-          shuffleOptions({
-            id: `drill-${slug(t.subtopic)}-${ti}-${k + 1}`,
-            section: last.section,
-            topic: t.topic,
-            subtopic: t.subtopic,
-            text: sanitizeStem(perturbedStem),
-            options: [...last.options],
-            correctIndex: last.correctIndex,
-            isPlaceholder: false,
-          }),
-        );
-        emitted.add(normalizeText(perturbedStem));
-        continue;
+      let pick = eligible[(k + ti) % eligible.length];
+      // Walk forward while this exact text already shipped in this drill.
+      for (let offset = 0; offset < eligible.length; offset++) {
+        const candidate = eligible[((k + ti) % eligible.length + offset) % eligible.length];
+        if (!emitted.has(normalizeText(sanitizeStem(candidate.text)))) {
+          pick = candidate;
+          break;
+        }
+        // Pool exhausted for this slot: fall through to a verbatim cycle
+        // repeat of the in-walk candidate rather than inventing numbers.
+        pick = candidate;
       }
-
-      emitted.add(normalized);
+      const text = sanitizeStem(pick.text);
+      emitted.add(normalizeText(text));
       out.push(
         shuffleOptions({
           id: `drill-${slug(t.subtopic)}-${ti}-${k + 1}`,
-          section: base.section,
+          section: pick.section,
           topic: t.topic,
           subtopic: t.subtopic,
           text,
-          options: [...base.options],
-          correctIndex: base.correctIndex,
+          options: [...pick.options],
+          correctIndex: pick.correctIndex,
           isPlaceholder: false,
         }),
       );
     }
   });
   return out;
-}
-
-/**
- * Pick the next seed that would not emit a duplicate normalized text
- * given the current varyStem transform. Walk the pool cyclically.
- */
-function pickDedupedSeed(
-  pool: typeof nustSeedQuestions,
-  emitted: Set<string>,
-  t: DrillGenTarget,
-  k: number,
-  ti: number,
-): typeof nustSeedQuestions[number] {
-  const start = (k + ti) % pool.length;
-  for (let offset = 0; offset < pool.length; offset++) {
-    const candidate = pool[(start + offset) % pool.length];
-    const stem = sanitizeStem(stripSeedPrefix(candidate.text));
-    const text = varyStem(stem, t.topic, t.subtopic, k, ti);
-    if (!emitted.has(normalizeText(text))) return candidate;
-  }
-  // Pool fully fragmented for this slot — fall back to the first entry;
-  // the caller's safety valve will perturb it.
-  return pool[start];
-}
-
-/**
- * Deterministically vary the numbers/values inside a seed stem so the
- * same template can be reused with materially different text BEFORE any
- * text-level repeat occurs.
- *
- * Uses a deterministic multiplier derived from the target + slot, so
- * the same targets always yield the same questions — but consecutive
- * slots on the same subtopic get different numbers.
- */
-function varyStem(stem: string, topic: string, subtopic: string, k: number, ti: number): string {
-  const seed = hashString(`${topic}::${subtopic}::${k}::${ti}`);
-  const rng = mulberry32(seed);
-
-  // Deterministic digit replacer: picks digits/integer tokens in the stem
-  // and replaces them with a different deterministic value, capped to a
-  // sensible exam range so the question is still solvable.
-  return stem.replace(/-?\d+(\.\d+)?/g, (m) => {
-    const base = parseFloat(m);
-    if (!Number.isFinite(base)) return m;
-    const r = rng();
-    // Shift by 1–4 in either direction, keeping magnitudes sane.
-    const shift = Math.floor(r * 4) + 1;
-    const sign = r < 0.5 ? -1 : 1;
-    let next = base + sign * shift;
-    if (Number.isInteger(base)) {
-      next = Math.round(next);
-    } else {
-      next = Math.round(next * 10) / 10;
-    }
-    // Keep exam-friendly magnitudes: no zero/negative where a positive
-    // magnitude is expected, no absurdly large values.
-    if (next <= 0) next = Math.abs(next) || 1;
-    if (next > 9999) next = base;
-    return String(next);
-  });
-}
-
-/**
- * Heavier perturbation when the normal varyStem path would still collide:
- * reroll the inner digits with a different seed offset so the text differs.
- */
-function perturbStem(stem: string, k: number, ti: number): string {
-  const seed = hashString(`perturb::${k}::${ti}`);
-  const rng = mulberry32(seed);
-  return stem.replace(/-?\d+(\.\d+)?/g, (m) => {
-    const base = parseFloat(m);
-    if (!Number.isFinite(base)) return m;
-    const r = rng();
-    const shift = Math.floor(r * 6) + 2;
-    const sign = r < 0.5 ? -1 : 1;
-    let next = base + sign * shift;
-    if (Number.isInteger(base)) next = Math.round(next);
-    else next = Math.round(next * 10) / 10;
-    if (next <= 0) next = Math.abs(next) || 2;
-    if (next > 9999) next = base;
-    return String(next);
-  });
 }
 
 /** Expand plan targets into per-question slots, then attach generated items to slots. */
@@ -314,7 +211,9 @@ export function assignToSlots(generated: RawGenerated[], targets: DrillGenTarget
       topic: targets[0]?.topic ?? "General",
       subtopic: targets[0]?.subtopic ?? "General",
     };
-    return {
+    // Groq items get the same unbiased Fisher-Yates shuffle as fallback
+    // seeds — LLM position bias must never reach the user.
+    return shuffleOptions({
       id: `drill-${slug(slot.subtopic)}-ai-${i + 1}`,
       section: slot.section,
       topic: slot.topic,
@@ -323,7 +222,7 @@ export function assignToSlots(generated: RawGenerated[], targets: DrillGenTarget
       options: g.options.map((o) => sanitizeStem(o)),
       correctIndex: g.correctIndex,
       isPlaceholder: false,
-    } satisfies Question;
+    } satisfies Question);
   });
 }
 
@@ -353,11 +252,16 @@ async function tryGroqRoute(targets: DrillGenTarget[], timeoutMs = 30000): Promi
 }
 
 /**
- * Generate drill questions. Chain: Groq cloud route (one attempt; the
- * server route itself does one retry) → deterministic local fallback on
- * ANY failure (no key, network error, bad JSON). Never throws, never hangs.
+ * THE drill-question pipeline — the single async end-to-end path used by
+ * /app and /results. Groq cloud route (one attempt; the server route
+ * itself does one retry) → deterministic local fallback on ANY failure
+ * (no key, network error, bad JSON, timeout). Never throws: when Groq
+ * fails or is unconfigured the fallback delivers instantly.
+ *
+ * Every question on BOTH branches leaves here via shuffleOptions, so
+ * correctIndex is remapped and A/B/C/D placement is unbiased.
  */
-export async function generateDrillQuestions(targets: DrillGenTarget[]): Promise<Question[]> {
+export async function buildDrillQuestions(targets: DrillGenTarget[]): Promise<Question[]> {
   const active = targets.filter((t) => t.count > 0);
   if (active.length === 0) return [];
   try {
@@ -365,4 +269,9 @@ export async function generateDrillQuestions(targets: DrillGenTarget[]): Promise
   } catch {
     return buildDrillFallback(active);
   }
+}
+
+/** Back-compat alias — same pipeline, same guarantees. */
+export async function generateDrillQuestions(targets: DrillGenTarget[]): Promise<Question[]> {
+  return buildDrillQuestions(targets);
 }

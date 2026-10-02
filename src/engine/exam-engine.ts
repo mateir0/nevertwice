@@ -2,9 +2,57 @@ import type {
   ErrorType,
   ExamConfig,
   Mistake,
+  Question,
   Session,
   WeaknessNode,
 } from "@/types";
+
+/** Sentinel answer recorded when the per-question timer expires. */
+export const TIMEOUT_ANSWER = -1;
+
+export function nodeKey(topic: string, subtopic: string): string {
+  return `${topic}::${subtopic}`;
+}
+
+/**
+ * Pure answer → mistakes fold, shared by the session page and tests.
+ *
+ * - `null` (question never reached): skipped, never a mistake.
+ * - `TIMEOUT_ANSWER` (-1, timer expired): a mistake with errorType
+ *   "time-pressure". Running out of time IS the classification — no
+ *   further classification step applies.
+ * - correct index: counted, never a mistake.
+ * - any other wrong index: a mistake with the user's classification, or
+ *   "concept-gap" when unclassified.
+ */
+export function mistakesFromAnswers(
+  questions: Question[],
+  answers: (number | null)[],
+  errorKinds: (ErrorType | null)[],
+  sessionId: string,
+  now: number,
+): { correct: number; mistakes: Mistake[] } {
+  let correct = 0;
+  const mistakes: Mistake[] = [];
+  questions.forEach((q, qi) => {
+    const sel = answers[qi] ?? null;
+    if (sel === null) return;
+    if (sel === q.correctIndex) {
+      correct += 1;
+      return;
+    }
+    mistakes.push({
+      id: `mistake-${sessionId}-${qi}`,
+      questionId: q.id,
+      topic: q.topic,
+      subtopic: q.subtopic,
+      errorType: (sel === TIMEOUT_ANSWER ? "time-pressure" : (errorKinds[qi] ?? "concept-gap")) as ErrorType,
+      timestamp: now,
+      sessionId,
+    });
+  });
+  return { correct, mistakes };
+}
 
 export const ERROR_TYPES: {
   value: ErrorType;
@@ -54,10 +102,6 @@ function writeJson(key: string, value: unknown): void {
   } catch {
     // storage full / private mode — ignore
   }
-}
-
-function nodeKey(topic: string, subtopic: string): string {
-  return `${topic}::${subtopic}`;
 }
 
 export class ExamEngine {
@@ -117,8 +161,10 @@ export class ExamEngine {
   /**
    * Fold one finished session into the weakness graph.
    * - mistaken subtopics: mistakeCount +1, trend rising
-   * - previously-seen but clean this session: mistakeCount -1 (min 0), trend falling
-   * - untouched: stable
+   * - attempted this session but clean: mistakeCount -1 (min 0), trend falling
+   * - never attempted this session: untouched (stable) — a clean
+   *   Differentiation drill must NOT wipe a legitimate Atomic Structure fault
+   * - legacy sessions without attemptedKeys: skip decay entirely (stable)
    * Returns previous snapshot + updated nodes + changed keys for animation.
    */
   static recordSession(session: Session): {
@@ -131,6 +177,8 @@ export class ExamEngine {
     const mistakenKeys = new Set(
       session.mistakes.map((m) => nodeKey(m.topic, m.subtopic)),
     );
+    // Legacy sessions predate attempted-tracking: decay nothing.
+    const attemptedKeys = session.attemptedKeys ? new Set(session.attemptedKeys) : null;
     const changedKeys: string[] = [];
 
     const next = new Map<string, WeaknessNode>();
@@ -139,8 +187,8 @@ export class ExamEngine {
         const count = node.mistakeCount + 1;
         next.set(key, { ...node, mistakeCount: count, lastSeen: session.date, trend: "rising" });
         changedKeys.push(key);
-      } else {
-        // Clean session for a known-weak node: decay toward strong.
+      } else if (attemptedKeys !== null && attemptedKeys.has(key)) {
+        // Attempted but clean this session: decay toward strong.
         if (node.mistakeCount > 0) {
           next.set(key, {
             ...node,
@@ -151,6 +199,9 @@ export class ExamEngine {
         } else {
           next.set(key, { ...node, trend: "stable" });
         }
+      } else {
+        // Untouched this session (or legacy session): stable.
+        next.set(key, { ...node, trend: "stable" });
       }
     });
 

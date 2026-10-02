@@ -1,5 +1,6 @@
 import type { ExamConfig, Question } from "@/types";
 import { shuffleOptions } from "@/engine/question-generator";
+import { nustBank } from "./nust-bank";
 
 /**
  * NUST Entry Test (NET) — exam-specific knowledge lives ONLY here.
@@ -70,52 +71,93 @@ export const nustConfig: ExamConfig = {
   ],
 };
 
-type Seed = [section: string, topic: string, subtopic: string, stem: string, options: [string, string, string, string], correct: number];
+/**
+ * The live seed bank: 120 real NUST-NET-style MCQs (see nust-bank.ts).
+ * The old 20-question "Stand-in drill" placeholder set is gone — nothing
+ * in the app may depend on placeholder text anymore.
+ */
+export const nustSeedQuestions: Question[] = nustBank;
 
-const SEEDS: Seed[] = [
-  ["Mathematics", "Algebra", "Quadratic Equations", "Practice drill: if x^2 - 5x + 6 = 0, the roots are?", ["x = 2, 3", "x = 1, 6", "x = -2, -3", "x = 0, 5"], 0],
-  ["Mathematics", "Algebra", "Sequences & Series", "Practice drill: the 5th term of 2, 6, 18, ... is?", ["54", "162", "486", "108"], 1],
-  ["Mathematics", "Calculus", "Differentiation", "Practice drill: d/dx (x^3) equals?", ["3x^2", "x^2", "3x", "x^3 / 3"], 0],
-  ["Mathematics", "Calculus", "Integration", "Practice drill: integral of 2x dx equals?", ["x^2 + C", "2 + C", "x + C", "2x^2 + C"], 0],
-  ["Mathematics", "Trigonometry", "Identities", "Practice drill: sin^2(x) + cos^2(x) equals?", ["1", "0", "2", "tan(x)"], 0],
-  ["Physics", "Mechanics", "Kinematics", "Practice drill: a body at rest accelerates at 2 m/s^2 for 3 s. Final velocity?", ["6 m/s", "3 m/s", "9 m/s", "12 m/s"], 0],
-  ["Physics", "Mechanics", "Newton Laws", "Practice drill: a 2 kg mass under 10 N net force accelerates at?", ["5 m/s^2", "20 m/s^2", "2 m/s^2", "0.2 m/s^2"], 0],
-  ["Physics", "Mechanics", "Work Energy Power", "Practice drill: 100 J of work in 20 s is what power?", ["5 W", "2000 W", "120 W", "80 W"], 0],
-  ["Physics", "Electromagnetism", "Electrostatics", "Practice drill: like charges do what?", ["Repel", "Attract", "Cancel", "Nothing"], 0],
-  ["Physics", "Electromagnetism", "Current Electricity", "Practice drill: V = 12 V, R = 4 ohm. Current?", ["3 A", "48 A", "8 A", "16 A"], 0],
-  ["Chemistry", "Physical Chemistry", "Atomic Structure", "Practice drill: electrons were discovered via?", ["Cathode rays", "Alpha scattering", "Photoelectric effect", "X-ray diffraction"], 0],
-  ["Chemistry", "Physical Chemistry", "Chemical Bonding", "Practice drill: NaCl is held by which bond?", ["Ionic", "Covalent", "Metallic", "Hydrogen"], 0],
-  ["Chemistry", "Organic Chemistry", "Hydrocarbons", "Practice drill: methane has which geometry?", ["Tetrahedral", "Linear", "Planar", "Pyramidal"], 0],
-  ["Chemistry", "Inorganic Chemistry", "Periodic Properties", "Practice drill: most electronegative element?", ["Fluorine", "Oxygen", "Chlorine", "Sodium"], 0],
-  ["English", "Grammar", "Tenses", "Practice drill: choose the correct sentence.", ["She goes to school daily.", "She go to school daily.", "She going to school daily.", "She gone to school daily."], 0],
-  ["English", "Vocabulary", "Synonyms", "Practice drill: pick the synonym of RAPID.", ["Fast", "Slow", "Quiet", "Heavy"], 0],
-  ["English", "Comprehension", "Inference", "Practice drill: 'He arrived drenched.' What can be inferred?", ["It was raining.", "He was swimming.", "He spilled water.", "He was crying."], 0],
-  ["Intelligence", "Logical Reasoning", "Series", "Practice drill: next in 3, 6, 12, 24, ...?", ["48", "36", "30", "42"], 0],
-  ["Intelligence", "Logical Reasoning", "Analogies", "Practice drill: Book is to Reading as Pen is to?", ["Writing", "Drawing only", "Eating", "Sleeping"], 0],
-  ["Intelligence", "Non-Verbal", "Pattern Completion", "Practice drill: a square rotated 90 degrees still looks like?", ["A square", "A triangle", "A circle", "A line"], 0],
-];
+// ---------- cross-session freshness ----------
 
-export const nustSeedQuestions: Question[] = SEEDS.map((s, i) => ({
-  id: `nust-seed-${i + 1}`,
-  section: s[0],
-  topic: s[1],
-  subtopic: s[2],
-  text: `Stand-in drill Q${i + 1} — ${s[3]}`,
-  options: [s[4][0], s[4][1], s[4][2], s[4][3]],
-  correctIndex: s[5],
-  isPlaceholder: true,
-}));
+const RECENT_KEY = "nevertwice-recent-qids";
+/** Question IDs dealt across the last 3 sessions (3 × 20). Most-recent first. */
+const RECENT_CAP = 60;
 
-export function getQuestionsForSession(count = 20): Question[] {
-  const pool = [...nustSeedQuestions];
-  // Fisher-Yates shuffle the bank, then take the first n. Never pick
-  // with replacement — if the bank holds fewer than n, take all shuffled,
-  // never duplicate.
+function isBrowser(): boolean {
+  return typeof window !== "undefined";
+}
+
+/** IDs dealt recently, most-recent first. Empty outside the browser. */
+export function getRecentQuestionIds(): string[] {
+  if (!isBrowser()) return [];
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((v): v is string => typeof v === "string");
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Record dealt bank IDs as seen. Unknown IDs (e.g. per-drill generated IDs)
+ * are ignored so the list only ever tracks real bank questions.
+ */
+export function recordSeenQuestionIds(ids: string[]): void {
+  if (!isBrowser()) return;
+  const known = new Set(nustSeedQuestions.map((q) => q.id));
+  const fresh = ids.filter((id) => known.has(id));
+  if (fresh.length === 0) return;
+  try {
+    const prev = getRecentQuestionIds().filter((id) => !fresh.includes(id));
+    localStorage.setItem(RECENT_KEY, JSON.stringify([...fresh, ...prev].slice(0, RECENT_CAP)));
+  } catch {
+    // storage full / private mode — ignore (freshness degrades, app works)
+  }
+}
+
+function shuffled<T>(arr: T[]): T[] {
+  const pool = [...arr];
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  const selected = pool.slice(0, Math.min(count, pool.length));
+  return pool;
+}
+
+export function getQuestionsForSession(count = 20): Question[] {
+  const recent = new Set(getRecentQuestionIds());
+  // Prefer questions unseen in the last 3 sessions.
+  let pool = nustSeedQuestions.filter((q) => !recent.has(q.id));
+  let selected = shuffled(pool).slice(0, Math.min(count, pool.length));
+
+  if (selected.length < count) {
+    // Bank can't fill 20 fresh (only possible if the bank shrinks below
+    // RECENT_CAP + count): top up from least-recently-seen first.
+    const recentList = getRecentQuestionIds();
+    const picked = new Set(selected.map((q) => q.id));
+    const byId = new Map(nustSeedQuestions.map((q) => [q.id, q]));
+    for (let i = recentList.length - 1; i >= 0 && selected.length < count; i--) {
+      const q = byId.get(recentList[i]);
+      if (q && !picked.has(q.id)) {
+        selected.push(q);
+        picked.add(q.id);
+      }
+    }
+    // Absolute last resort (bank smaller than count): cycle the bank.
+    for (let i = 0; i < nustSeedQuestions.length && selected.length < count; i++) {
+      const q = nustSeedQuestions[i];
+      if (!picked.has(q.id)) {
+        selected.push(q);
+        picked.add(q.id);
+      }
+    }
+  }
+
+  recordSeenQuestionIds(selected.map((q) => q.id));
   // Every assembled question gets a fresh unbiased option shuffle so
   // correctIndex is remapped and the A/B/C/D position is not biased by
   // the seed data (which is almost all index 0).
