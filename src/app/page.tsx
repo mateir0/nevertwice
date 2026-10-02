@@ -4,6 +4,7 @@ import { Wordmark } from "@/components/Wordmark";
 import { TraceDivider } from "@/components/TraceDivider";
 import { WeaknessHeatmap } from "@/components/WeaknessHeatmap";
 import { DossierBackdrop } from "@/components/DossierBackdrop";
+import { LandingBoard } from "@/components/LandingBoard";
 
 const LEDGER = [
   { v: "200", l: "MCQs" },
@@ -212,11 +213,7 @@ export default function LandingPage() {
               </div>
 
               <div className="mt-4">
-                <WeaknessHeatmap
-                  nodes={[]}
-                  title="THE BOARD — LIVE CIRCUIT"
-                  emptyAction={{ href: "/app", label: "BEGIN" }}
-                />
+                <LandingBoard />
               </div>
             </section>
 
