@@ -154,13 +154,16 @@ export function formatMath(text: string): string {
 const DRILL_PREFIX = /^\s*drill\s*[·•:―—–-]\s*/i;
 const DRILL_TAG_PREFIX = /^\s*drill\s*[·•]\s*[^―—–\-:]+?\s*[―—–\-:]\s*/i;
 const PRACTICE_PREFIX = /^\s*practice\s*drill\s*:\s*/i;
+// Stored seed-bank form: "Stand-in drill Q12 — <stem>".
+const STANDIN_PREFIX = /^\s*stand[\s-]*in\s+drill\s+Q\d+\s*[―—–\-:]\s*/i;
 
 /** Strip leading "Drill · … —" / "Practice drill:" meta-prefixes, if any. */
 export function sanitizeStem(text: string): string {
   if (!text) return text;
   let out = text;
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) {
     const next = out
+      .replace(STANDIN_PREFIX, "")
       .replace(DRILL_TAG_PREFIX, "")
       .replace(PRACTICE_PREFIX, "")
       .replace(DRILL_PREFIX, "")

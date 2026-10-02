@@ -161,16 +161,21 @@ export default function SessionPage() {
 
       <main>
         <article aria-label={`Question ${index + 1} of ${total}`} className="card">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="font-display text-xl tracking-wide text-blood">{question.section}</span>
-            <span className="bronze-frame bg-night px-2 py-1 font-type text-[11px] text-faded">
-              {question.topic} / {question.subtopic}
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-display text-xl tracking-wide text-blood">{question.section}</span>
+              <span className="bronze-frame bg-night px-2 py-1 font-type text-[11px] text-faded">
+                {question.topic} / {question.subtopic}
+              </span>
+            </div>
+            <span className="flex-none text-right font-type text-xs tracking-widest text-faded">
+              № {String(index + 1).padStart(2, "0")}
             </span>
           </div>
 
-          <p className="mb-5 font-display text-[17px] leading-relaxed text-parchment">{displayMath(question.text)}</p>
+          <p className="mb-7 text-[21px] leading-relaxed text-parchment">{displayMath(question.text)}</p>
 
-          <div className="grid grid-cols-1 gap-3" role="radiogroup" aria-label="Answer options">
+          <div className="grid grid-cols-1 gap-4" role="radiogroup" aria-label="Answer options">
             {question.options.map((opt, i) => {
               const letter = String.fromCharCode(65 + i);
               const picked = selected === i;
@@ -183,19 +188,25 @@ export default function SessionPage() {
                   aria-checked={picked}
                   disabled={isAnswered}
                   onClick={() => choose(i)}
-                  className="bronze-frame flex min-h-[56px] items-center gap-3 bg-night p-4 text-left font-display text-[16px] text-parchment transition-all duration-200 disabled:cursor-default"
+                  className="bronze-frame flex items-center gap-4 bg-night p-5 text-left transition-all duration-200 disabled:cursor-default enabled:hover:translate-x-1 enabled:hover:border-amber enabled:hover:shadow-[0_0_18px_rgba(166,124,61,0.3)]"
                   style={{
-                    borderColor: revealed ? "#6B7F4E" : wrongPick ? "#B3202C" : undefined,
-                    borderWidth: revealed || wrongPick ? "2px" : undefined,
+                    borderLeft: revealed
+                      ? "4px solid #6B7F4E"
+                      : wrongPick
+                        ? "4px solid #B3202C"
+                        : undefined,
                     backgroundColor: revealed
                       ? "rgba(107,127,78,0.1)"
                       : wrongPick
                         ? "rgba(179,32,44,0.08)"
                         : undefined,
+                    boxShadow: revealed ? "0 0 18px rgba(107,127,78,0.35)" : undefined,
                   }}
                 >
-                  <span className="font-type text-base font-bold">{letter}.</span>
-                  <span className="flex-1">{displayMath(opt)}</span>
+                  <span className={`keycap${revealed ? " keycap-olive" : wrongPick ? " keycap-blood" : ""}`}>
+                    {letter}
+                  </span>
+                  <span className="flex-1 font-type text-[17px] text-parchment">{displayMath(opt)}</span>
                   {revealed && <span className="rounded bg-olive px-1.5 font-type text-night">✓</span>}
                   {wrongPick && <span className="rounded bg-blood px-1.5 font-type text-parchment">✗</span>}
                 </button>
