@@ -40,6 +40,22 @@ const MOCK_RATE_LIMIT_MAX = 25;
 const MOCK_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const mockRateBuckets = new Map<string, { count: number; windowStart: number }>();
 
+// DAILY MOCK CAP: max 3 full mocks per IP per day. The token budget is
+// shared with drills — one heavy mock day must never starve the drill
+// pipeline (drills stay unlimited by this cap). Counted in batch requests:
+// ~7 batches per full mock → 21 batches/day ≈ 3 mocks/day.
+const MOCK_DAILY_MOCK_CAP = 3;
+const MOCK_DAILY_MAX_BATCHES = MOCK_DAILY_MOCK_CAP * 7;
+const MOCK_DAILY_WINDOW_MS = 24 * 60 * 60 * 1000;
+const mockDailyBuckets = new Map<string, { count: number; dayStart: number }>();
+
+/** Seconds until next UTC midnight — Retry-After for the daily cap. */
+function secondsUntilMidnight(): number {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  return Math.max(1, Math.ceil((next.getTime() - now.getTime()) / 1000));
+}
+
 /** Client IP: first entry of x-forwarded-for, else "unknown" (one bucket). */
 function clientIp(req: Request): string {
   const xff = req.headers.get("x-forwarded-for");
@@ -68,6 +84,28 @@ function mockRateLimited(ip: string): boolean {
     return false;
   }
   if (bucket.count >= MOCK_RATE_LIMIT_MAX) return true;
+  bucket.count += 1;
+  return false;
+}
+
+/**
+ * True when this IP already used its ~3 full mocks (≈21 batches) in the
+ * current 24h window. Successful check consumes one slot. Expired windows
+ * reset on next hit; stale buckets are swept opportunistically.
+ */
+function mockDailyLimited(ip: string): boolean {
+  const now = Date.now();
+  const bucket = mockDailyBuckets.get(ip);
+  if (!bucket || now - bucket.dayStart >= MOCK_DAILY_WINDOW_MS) {
+    mockDailyBuckets.set(ip, { count: 1, dayStart: now });
+    if (mockDailyBuckets.size > 1000) {
+      for (const [k, b] of mockDailyBuckets) {
+        if (now - b.dayStart >= MOCK_DAILY_WINDOW_MS) mockDailyBuckets.delete(k);
+      }
+    }
+    return false;
+  }
+  if (bucket.count >= MOCK_DAILY_MAX_BATCHES) return true;
   bucket.count += 1;
   return false;
 }
@@ -111,7 +149,15 @@ async function callGroq(prompt: string, apiKey: string, timeoutMs = 60000) {
       }),
       signal: controller.signal,
     });
-    if (!res.ok) throw new Error(`groq http ${res.status}`);
+    if (!res.ok) {
+      // Preserve Groq 429s (per-minute limit) with their Retry-After so
+      // the route can answer 429 and the client can back off + retry once.
+      const retryAfter = res.status === 429 ? res.headers.get("retry-after") : null;
+      throw Object.assign(new Error(`groq http ${res.status}`), {
+        groqStatus: res.status,
+        groqRetryAfter: retryAfter,
+      });
+    }
     const data = (await res.json()) as {
       choices?: { message?: { content?: unknown } }[];
     };
@@ -142,23 +188,57 @@ export async function POST(req: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "bad-subjects" }, { status: 400 });
   }
 
-  // Quota guard BEFORE Groq: 25 mock batches per IP per hour, drill bucket
-  // untouched. The client treats 429 like any other failure and cycles
-  // the bank for the batch.
-  if (mockRateLimited(clientIp(req))) {
-    return NextResponse.json({ error: "rate-limited" }, { status: 429 });
+  // Quota guards BEFORE Groq. Daily print cap first (honest 429), then
+  // the hourly batch bucket. Drills are untouched by both. Every 429
+  // carries Retry-After so the client can back off (default 60s).
+  const ip = clientIp(req);
+  if (mockDailyLimited(ip)) {
+    return NextResponse.json(
+      { error: "mock-quota-spent" },
+      { status: 429, headers: { "retry-after": String(secondsUntilMidnight()) } },
+    );
+  }
+  if (mockRateLimited(ip)) {
+    return NextResponse.json(
+      { error: "rate-limited" },
+      { status: 429, headers: { "retry-after": "60" } },
+    );
   }
 
   const prompt = buildMockPrompt(subjects);
+  const groqRetryAfter = (e: unknown): string | null => {
+    if (e && typeof e === "object" && "groqStatus" in e && (e as { groqStatus?: unknown }).groqStatus === 429) {
+      const raw = (e as { groqRetryAfter?: unknown }).groqRetryAfter;
+      if (typeof raw === "string" && raw.trim().length > 0) return raw;
+      return "60";
+    }
+    return null;
+  };
   try {
     const items = await callGroq(prompt, apiKey);
     return NextResponse.json({ items });
-  } catch {
+  } catch (first) {
+    const ra = groqRetryAfter(first);
+    if (ra !== null) {
+      // Groq per-minute limit: no hot retry — answer 429 so the client
+      // waits out the minute window and retries once.
+      return NextResponse.json(
+        { error: "groq-rate-limited" },
+        { status: 429, headers: { "retry-after": ra } },
+      );
+    }
     try {
       // One retry, same prompt and validation.
       const items = await callGroq(prompt, apiKey);
       return NextResponse.json({ items });
-    } catch {
+    } catch (second) {
+      const ra2 = groqRetryAfter(second);
+      if (ra2 !== null) {
+        return NextResponse.json(
+          { error: "groq-rate-limited" },
+          { status: 429, headers: { "retry-after": ra2 } },
+        );
+      }
       return NextResponse.json({ error: "groq-failed" }, { status: 502 });
     }
   }

@@ -343,6 +343,37 @@ export async function generateDrillQuestions(targets: DrillGenTarget[]): Promise
 export const MOCK_TOTAL_QUESTIONS = 200;
 export const MOCK_TOTAL_SECONDS = 180 * 60;
 export const MOCK_BATCH_MAX = 12;
+/** Stagger between sequential mock batches — keeps Groq under per-minute limits. */
+export const MOCK_BATCH_STAGGER_MS = 8000;
+/** Server 429 error body when the daily mock print quota is spent. */
+export const MOCK_QUOTA_SPENT_ERROR = "mock-quota-spent";
+/** Honest dossier line shown when the daily print quota is spent. */
+export const MOCK_QUOTA_SPENT_LINE =
+  "DAILY PRINT QUOTA SPENT — DRILLS UNAFFECTED. BACK TOMORROW.";
+
+function sleep(ms: number): Promise<void> {
+  if (ms <= 0) return Promise.resolve();
+  // Non-DOM envs (SSR, node:test) never burn real minutes waiting on
+  // stagger/backoff — production browsers always wait the full delay.
+  if (typeof document === "undefined") return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Stagger delay for mock batches: 0 off-DOM (tests/SSR), ~8s in browsers. */
+export function getMockStaggerMs(): number {
+  const override = Number(process.env.MOCK_BATCH_STAGGER_MS);
+  if (Number.isFinite(override) && override >= 0) return override;
+  if (typeof document === "undefined") return 0;
+  return MOCK_BATCH_STAGGER_MS;
+}
+
+/** Retry-After (seconds) → ms. Defaults to 60s per the mock budget fix. */
+function retryAfterMs(header: string | null): number {
+  const secs = header ? Number(header) : NaN;
+  if (Number.isFinite(secs) && secs >= 0) return secs * 1000;
+  if (typeof document === "undefined") return 0;
+  return 60 * 1000;
+}
 
 export interface MockSubjectCount {
   subject: string;
@@ -377,7 +408,8 @@ export function planMockFill(): MockFill[] {
 /**
  * Flatten every subject's Groq remainder into ≤12-question batches,
  * preserving subject order (a batch may span two subjects). 82 remainder
- * questions → 7 batches, fired in parallel.
+ * questions → 7 batches, fired SEQUENTIALLY with ~8s stagger (Groq free
+ * tier rate-limits per minute — parallel spikes 429 most batches).
  */
 export function planMockBatches(fills: MockFill[]): MockSubjectCount[][] {
   const slots: string[] = [];
@@ -491,6 +523,12 @@ function dealBankVerbatim(
  * One Groq mock batch via the server-side /api/generate-mock route.
  * Throws on ANY failure (route down, key unset, short/invalid items) —
  * the caller falls back to verbatim bank cycling for the batch.
+ *
+ * 429 BACKOFF: on HTTP 429 (Groq per-minute limit), read the Retry-After
+ * header (default 60s), wait it out, retry once. A second failure falls
+ * back to verbatim bank cycling. The daily print quota
+ * ("mock-quota-spent") is NOT retried — it throws through so the UI can
+ * show the honest dossier line.
  */
 async function tryGroqMockRoute(
   batch: MockSubjectCount[],
@@ -499,16 +537,38 @@ async function tryGroqMockRoute(
 ): Promise<Question[]> {
   if (typeof window === "undefined") throw new Error("groq mock route is client-side only");
   const total = batch.reduce((n, s) => n + s.count, 0);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch("/api/generate-mock", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subjects: batch }),
-      signal: controller.signal,
-    });
-    if (!res.ok) throw new Error(`mock route http ${res.status}`);
+  const postOnce = async (): Promise<Response> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch("/api/generate-mock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subjects: batch }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const parseBatch = async (res: Response): Promise<Question[]> => {
+    if (!res.ok) {
+      if (res.status === 429) {
+        let quotaSpent = false;
+        try {
+          const err = (await res.clone().json()) as { error?: unknown };
+          quotaSpent = err?.error === MOCK_QUOTA_SPENT_ERROR;
+        } catch {
+          quotaSpent = false;
+        }
+        if (quotaSpent) throw new Error(MOCK_QUOTA_SPENT_ERROR);
+      }
+      const retryAfter = res.status === 429 ? res.headers.get("retry-after") : null;
+      throw Object.assign(new Error(`mock route http ${res.status}`), {
+        mockIs429: res.status === 429,
+        mockRetryAfterMs: res.status === 429 ? retryAfterMs(retryAfter) : 0,
+      });
+    }
     const data = (await res.json()) as { items?: unknown };
     const items = parseStrictDrillJson(JSON.stringify(data.items));
     if (items.length !== total) throw new Error(`mock batch short: ${items.length}/${total}`);
@@ -536,21 +596,45 @@ async function tryGroqMockRoute(
       }
     }
     return out;
-  } finally {
-    clearTimeout(timer);
+  };
+
+  try {
+    return await parseBatch(await postOnce());
+  } catch (first) {
+    if (first instanceof Error && first.message === MOCK_QUOTA_SPENT_ERROR) throw first;
+    // Only 429s are worth the wait — other failures fall straight through
+    // to verbatim bank cycling for the batch.
+    const is429 = !!(
+      first &&
+      typeof first === "object" &&
+      (first as { mockIs429?: unknown }).mockIs429
+    );
+    if (!is429) throw first;
+    const waitMs =
+      first && typeof first === "object" && "mockRetryAfterMs" in first
+        ? Number((first as { mockRetryAfterMs?: unknown }).mockRetryAfterMs) || 0
+        : retryAfterMs(null);
+    await sleep(waitMs);
+    // Retry once after the backoff; quota-spent still throws through.
+    return await parseBatch(await postOnce());
   }
 }
 
 /**
  * THE full-mock pipeline. Bank-first per subject → remainder chunked into
- * ≤12-question batches fired in parallel → per-batch verbatim fallback on
- * failure. Records exposure + recency once per deal (StrictMode-safe via
- * one shared in-flight promise). Never throws: worst case is a 200Q paper
- * with some bank repeats.
+ * ≤12-question batches fired SEQUENTIALLY with ~8s stagger (Groq free
+ * tier rate-limits per minute — the old parallel spike 429d most batches
+ * and silently degraded to bank repeats) → per-batch verbatim fallback on
+ * failure (429s get one Retry-After backoff + one retry first). Records
+ * exposure + recency once per deal (StrictMode-safe via one shared
+ * in-flight promise). The daily print quota ("mock-quota-spent") throws
+ * through — no silent fallback — so the UI can show the honest dossier
+ * line. Any other failure never throws: worst case is a 200Q paper with
+ * some bank repeats.
  */
 let inflightMock: Promise<Question[]> | null = null;
 
-export function buildMockQuestions(): Promise<Question[]> {
+export function buildMockQuestions(opts?: { staggerMs?: number }): Promise<Question[]> {
   if (inflightMock) return inflightMock;
   const run = async (): Promise<Question[]> => {
     try {
@@ -566,23 +650,27 @@ export function buildMockQuestions(): Promise<Question[]> {
         allBankIds.push(...dealt.bankIds);
       });
 
-      // 2) Groq remainder in parallel batches; per-batch bank fallback.
+      // 2) Groq remainder in SEQUENTIAL batches with stagger; per-batch
+      // bank fallback (429s already backed off + retried once inside).
       const batches = planMockBatches(fills);
-      const batchResults = await Promise.all(
-        batches.map(async (batch, bi) => {
-          try {
-            return await tryGroqMockRoute(batch, bi);
-          } catch {
-            const fb: Question[] = [];
-            for (const block of batch) {
-              const dealt = dealBankVerbatim(block.subject, block.count, `${slugOf(block.subject)}f${bi}`);
-              fb.push(...dealt.questions);
-              allBankIds.push(...dealt.bankIds);
-            }
-            return fb;
+      const staggerMs = opts?.staggerMs ?? getMockStaggerMs();
+      const batchResults: Question[][] = [];
+      for (let bi = 0; bi < batches.length; bi++) {
+        if (bi > 0 && staggerMs > 0) await sleep(staggerMs);
+        const batch = batches[bi];
+        try {
+          batchResults.push(await tryGroqMockRoute(batch, bi));
+        } catch (e) {
+          if (e instanceof Error && e.message === MOCK_QUOTA_SPENT_ERROR) throw e;
+          const fb: Question[] = [];
+          for (const block of batch) {
+            const dealt = dealBankVerbatim(block.subject, block.count, `${slugOf(block.subject)}f${bi}`);
+            fb.push(...dealt.questions);
+            allBankIds.push(...dealt.bankIds);
           }
-        }),
-      );
+          batchResults.push(fb);
+        }
+      }
 
       // 3) Assemble in subject order: bank takes, then generated.
       const genBySubject = new Map<string, Question[]>();
@@ -603,7 +691,8 @@ export function buildMockQuestions(): Promise<Question[]> {
       recordSeenQuestionIds(allBankIds);
       recordExposureIds([...allBankIds, ...paper.map((q) => q.id)]);
       return paper;
-    } catch {
+    } catch (e) {
+      if (e instanceof Error && e.message === MOCK_QUOTA_SPENT_ERROR) throw e;
       // Absolute last resort (empty bank?): cycle the whole bank verbatim.
       const fb: Question[] = [];
       const bankIds: string[] = [];

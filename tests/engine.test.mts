@@ -38,7 +38,11 @@ import {
   buildDrillQuestions,
   buildMockPrompt,
   buildMockQuestions,
+  getMockStaggerMs,
   MOCK_BATCH_MAX,
+  MOCK_BATCH_STAGGER_MS,
+  MOCK_QUOTA_SPENT_ERROR,
+  MOCK_QUOTA_SPENT_LINE,
   MOCK_SUBJECTS,
   MOCK_TOTAL_QUESTIONS,
   MOCK_TOTAL_SECONDS,
@@ -763,6 +767,37 @@ describe("FULL MOCK timer — 180min constant, expiry files time-pressure", () =
     );
     assert.ok(app.includes("PRINTING YOUR PAPER"), "no printing state");
     assert.ok(!app.includes("PAST PAPERS"), "past-papers label leaked");
+  });
+
+  it("mock budget fix — sequential batches, 429 backoff, daily cap, honest copy", () => {
+    // Sequential, not parallel: no Promise.all in the mock pipeline.
+    const root = path.resolve(process.cwd());
+    const engine = fs.readFileSync(
+      path.join(root, "src/engine/question-generator.ts"),
+      "utf8",
+    );
+    assert.ok(!engine.includes("Promise.all"), "parallel batch spike still present");
+    assert.equal(MOCK_BATCH_STAGGER_MS, 8000, "stagger must be ~8s");
+    assert.equal(getMockStaggerMs(), 0, "off-DOM stagger must be 0 (tests/SSR)");
+    // 429 backoff reads Retry-After and retries once; quota-spent throws through.
+    assert.ok(engine.includes("retry-after"), "Retry-After backoff missing");
+    assert.equal(MOCK_QUOTA_SPENT_ERROR, "mock-quota-spent", "quota error body changed");
+    assert.equal(
+      MOCK_QUOTA_SPENT_LINE,
+      "DAILY PRINT QUOTA SPENT — DRILLS UNAFFECTED. BACK TOMORROW.",
+      "quota dossier line changed",
+    );
+    // Server: daily print cap of 3 mocks, 429 with the quota body; drills unlimited.
+    const mock = fs.readFileSync(path.join(root, "src/app/api/generate-mock/route.ts"), "utf8");
+    assert.ok(mock.includes("MOCK_DAILY_MOCK_CAP = 3"), "daily cap is not 3 mocks");
+    assert.ok(mock.includes("mock-quota-spent"), "quota 429 body missing");
+    assert.ok(mock.includes("retry-after"), "quota 429 needs Retry-After");
+    const drill = fs.readFileSync(path.join(root, "src/app/api/generate-drill/route.ts"), "utf8");
+    assert.ok(!drill.includes("mock-quota-spent"), "drill bucket touched by mock cap");
+    // Client: honest wait copy + quota line wired into /app.
+    const app = fs.readFileSync(path.join(root, "src/app/app/page.tsx"), "utf8");
+    assert.ok(app.includes("PRINTING YOUR PAPER… (~1 MINUTE)"), "honest wait copy missing");
+    assert.ok(app.includes("MOCK_QUOTA_SPENT_LINE"), "quota line not wired");
   });
 });
 

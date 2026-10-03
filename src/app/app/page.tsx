@@ -11,7 +11,7 @@ import { DossierAdmin } from "@/components/DossierAdmin";
 import { OfflineBadge } from "@/components/OfflineBadge";
 import { useSessions, useWeaknessNodes } from "@/hooks/useExam";
 import { planDrill, planToGenTargets, saveActiveDrill, type DrillPlan } from "@/engine/drill-planner";
-import { buildDrillQuestions, buildMockQuestions } from "@/engine/question-generator";
+import { buildDrillQuestions, buildMockQuestions, MOCK_QUOTA_SPENT_LINE } from "@/engine/question-generator";
 import type { Question } from "@/types";
 
 type AppTab = "drill" | "threats" | "progress" | "files";
@@ -30,10 +30,11 @@ export default function AppDashboard() {
   const [plan, setPlan] = useState<DrillPlan | null>(null);
   const [drillQuestions, setDrillQuestions] = useState<Question[] | null>(null);
   const [generating, setGenerating] = useState(false);
-  // Full mock builds on demand (button tap): ~7 parallel Groq batches take
-  // ~30s, bank cycling when offline. No mount effect — never burn quota on
-  // a plain /app visit.
+  // Full mock builds on demand (button tap): ~7 SEQUENTIAL Groq batches
+  // with ~8s stagger take ~1 minute, bank cycling when offline. No mount
+  // effect — never burn quota on a plain /app visit.
   const [mockGenerating, setMockGenerating] = useState(false);
+  const [mockQuotaSpent, setMockQuotaSpent] = useState(false);
   // Direction A: one decisive action per screen. DRILL first, always.
   const [tab, setTab] = useState<AppTab>("drill");
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -92,22 +93,32 @@ export default function AppDashboard() {
   function beginMock(): void {
     if (mockGenerating) return;
     setMockGenerating(true);
-    buildMockQuestions().then((qs) => {
-      if (!qs || qs.length === 0) {
+    setMockQuotaSpent(false);
+    buildMockQuestions().then(
+      (qs) => {
+        if (!qs || qs.length === 0) {
+          setMockGenerating(false);
+          return;
+        }
+        const now = Date.now();
+        saveActiveDrill({
+          id: `mock-${now}`,
+          createdAt: now,
+          targets: [],
+          reason: "FULL MOCK — NET FORMAT",
+          questions: qs,
+          kind: "mock",
+        });
+        router.push("/session?mode=mock");
+      },
+      (err) => {
+        // Daily print quota spent: honest dossier line, drills unaffected.
+        if (err instanceof Error && err.message.includes("mock-quota-spent")) {
+          setMockQuotaSpent(true);
+        }
         setMockGenerating(false);
-        return;
-      }
-      const now = Date.now();
-      saveActiveDrill({
-        id: `mock-${now}`,
-        createdAt: now,
-        targets: [],
-        reason: "FULL MOCK — NET FORMAT",
-        questions: qs,
-        kind: "mock",
-      });
-      router.push("/session?mode=mock");
-    });
+      },
+    );
   }
 
   function onTabKeyDown(e: KeyboardEvent): void {
@@ -226,13 +237,18 @@ export default function AppDashboard() {
                 <p className="mt-0.5 font-type text-[10px] leading-snug text-faded">
                   Full NET-format simulation — verified bank + generated. NUST doesn&apos;t release official past papers.
                 </p>
+                {mockQuotaSpent && (
+                  <p className="mt-1 font-type text-[10px] leading-snug tracking-widest text-blood" role="status">
+                    {MOCK_QUOTA_SPENT_LINE}
+                  </p>
+                )}
               </div>
               <button
                 onClick={beginMock}
                 disabled={mockGenerating}
                 className="btn-primary shrink-0 px-4 py-2 text-xs disabled:cursor-wait disabled:opacity-50"
               >
-                {mockGenerating ? "PRINTING YOUR PAPER…" : "BEGIN MOCK"}
+                {mockGenerating ? "PRINTING YOUR PAPER… (~1 MINUTE)" : "BEGIN MOCK"}
               </button>
             </div>
           </section>
