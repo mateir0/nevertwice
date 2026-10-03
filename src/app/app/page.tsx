@@ -3,13 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Crosshair, ScrollText, Timer, Zap } from "lucide-react";
-import { Wordmark } from "@/components/Wordmark";
+import { Crosshair, Zap } from "lucide-react";
 import { WeaknessHeatmap } from "@/components/WeaknessHeatmap";
 import { RecentSessions } from "@/components/RecentSessions";
 import { Trajectory } from "@/components/Trajectory";
-import { BankCoverage } from "@/components/BankCoverage";
-import { DossierCustody } from "@/components/DossierCustody";
+import { DossierAdmin } from "@/components/DossierAdmin";
 import { OfflineBadge } from "@/components/OfflineBadge";
 import { useSessions, useWeaknessNodes } from "@/hooks/useExam";
 import { planDrill, planToGenTargets, saveActiveDrill, type DrillPlan } from "@/engine/drill-planner";
@@ -82,10 +80,8 @@ export default function AppDashboard() {
     });
   }
 
-  const plannedTotal = plan ? plan.targets.reduce((n, t) => n + t.count, 0) : 0;
-
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8">
+      <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8">
       <header className="bronze-frame reveal mb-6 flex items-center justify-between gap-3 bg-panel px-4 py-2.5">
         <Link href="/" className="font-display text-xl tracking-wide text-blood">
           ← NEVERTWICE
@@ -98,75 +94,68 @@ export default function AppDashboard() {
         </span>
       </header>
 
-      <div className="reveal mb-6">
-        <Wordmark align="center" size="clamp(2.5rem, 5vw, 3.5rem)" />
-        <p className="label mt-3 text-center">
-          NUST ENTRY TEST • RE-PREPARATION MODE
-        </p>
-      </div>
-
       <main className="grid gap-5 md:grid-cols-[1.2fr_1fr] md:items-start">
         <div className="space-y-5">
-          <section aria-label="Full mock" className="card reveal" style={{ animationDelay: "60ms" }}>
-            <p className="label">
-              FULL MOCK — NET FORMAT
-            </p>
-            <p className="font-display mt-1 text-2xl tracking-wide text-parchment">
-              200 QUESTIONS · 180 MINUTES · NET WEIGHTING
-            </p>
-            <p className="mt-1 font-type text-xs leading-relaxed tracking-widest text-faded">
-              Full NET-format simulation — verified bank + generated. NUST doesn&apos;t release official past papers.
-            </p>
-            <button
-              onClick={beginMock}
-              disabled={mockGenerating}
-              className="btn-primary mt-4 flex w-full items-center justify-center gap-2 text-center text-lg disabled:cursor-wait disabled:opacity-50"
-            >
-              <ScrollText className="h-5 w-5" aria-hidden="true" />
-              {mockGenerating ? "PRINTING YOUR PAPER…" : "BEGIN MOCK"}
-            </button>
-          </section>
-
           {plan ? (
-            <section aria-label="Next drill" className="card reveal" style={{ animationDelay: "90ms" }}>
+            <section aria-label="Next drill" className="card reveal" style={{ animationDelay: "60ms" }}>
               <p className="label">
                 YOUR NEXT DRILL
               </p>
-              <p className="font-display mt-1 text-2xl tracking-wide text-parchment">
-                {plannedTotal} QUESTIONS • TARGETED • PACED
-              </p>
-              <p className="mt-1 font-display text-[17px] text-parchment/80">
+              <p className="font-display mt-2 text-[17px] leading-snug text-parchment/90">
                 {plan.reason}
               </p>
-              <p className="mt-2 font-type text-xs tracking-widest text-faded">
+              <p className="mt-1 font-type text-[11px] tracking-widest text-faded">
                 {plan.targets.map((t) => t.subtopic.toUpperCase()).join(" · ")}
               </p>
               <button
                 onClick={beginDrill}
                 disabled={generating || !drillQuestions}
-                className="btn-primary mt-4 flex w-full items-center justify-center gap-2 text-center text-lg disabled:cursor-wait disabled:opacity-50"
+                className="btn-primary mt-3 flex w-full items-center justify-center gap-2 px-5 py-2.5 text-center text-base disabled:cursor-wait disabled:opacity-50"
               >
                 <Crosshair className="h-5 w-5" aria-hidden="true" />
                 {generating || !drillQuestions ? "GENERATING DRILL…" : "BEGIN DRILL"}
               </button>
             </section>
           ) : (
-            <section aria-label="Next step" className="card reveal" style={{ animationDelay: "90ms" }}>
+            <section aria-label="Next step" className="card reveal" style={{ animationDelay: "60ms" }}>
               <p className="label">
                 YOUR NEXT 15 MINUTES
               </p>
-              <p className="font-display mt-1 text-2xl tracking-wide text-parchment">
+              <p className="font-display mt-2 text-lg leading-snug text-parchment">
                 20 QUESTIONS • 18 MINUTES • PACED
               </p>
-              <p className="mt-1 font-display text-[17px] text-parchment/80">
+              <p className="mt-1 font-display text-[15px] text-parchment/80">
                 One question at a time. Wrong answers get classified so the heatmap learns.
               </p>
-              <Link href="/session" className="btn-primary mt-4 flex items-center justify-center gap-2 text-center text-lg">
+              <Link href="/session" className="btn-primary mt-3 flex items-center justify-center gap-2 px-5 py-2.5 text-center text-base">
                 <Zap className="h-5 w-5" aria-hidden="true" />
                 BEGIN
               </Link>
             </section>
           )}
+
+          <section aria-label="Full mock" className="card reveal px-4 py-2.5" style={{ animationDelay: "90ms" }}>
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="label">
+                  FULL MOCK — NET FORMAT
+                </p>
+                <p className="mt-0.5 font-type text-xs tracking-widest text-parchment">
+                  200Q · 180 MIN · NET WEIGHTING
+                </p>
+                <p className="mt-0.5 font-type text-[10px] leading-snug text-faded">
+                  Full NET-format simulation — verified bank + generated. NUST doesn&apos;t release official past papers.
+                </p>
+              </div>
+              <button
+                onClick={beginMock}
+                disabled={mockGenerating}
+                className="btn-primary shrink-0 px-4 py-2 text-xs disabled:cursor-wait disabled:opacity-50"
+              >
+                {mockGenerating ? "PRINTING YOUR PAPER…" : "BEGIN MOCK"}
+              </button>
+            </div>
+          </section>
 
           <WeaknessHeatmap
             nodes={nodes}
@@ -179,27 +168,20 @@ export default function AppDashboard() {
 
         <div className="space-y-5">
           <RecentSessions sessions={sessions} />
-          <section aria-label="NET format reminder" className="card">
-            <h2 className="font-display flex items-center gap-2 text-2xl tracking-wide text-parchment">
-              <Timer className="h-5 w-5 text-bronze" aria-hidden="true" />
-              NET FORMAT
-            </h2>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {[
-                { v: "200", l: "MCQs" },
-                { v: "180", l: "MINUTES" },
-                { v: "~54s", l: "PER Q" },
-                { v: "0", l: "NEG. MARK" },
-              ].map((s) => (
-                <div key={s.l} className="bronze-frame bg-night p-3 text-center">
-                  <p className="font-type text-2xl font-bold text-blood">{s.v}</p>
-                  <p className="mt-1 font-type text-[10px] tracking-[0.08em] text-faded">{s.l}</p>
-                </div>
-              ))}
-            </div>
+          <DossierAdmin />
+          <section aria-label="NET format reference" className="bronze-frame flex items-stretch justify-between gap-1 bg-night px-2 py-2">
+            {[
+              { v: "200", l: "MCQs" },
+              { v: "180", l: "MINUTES" },
+              { v: "~54s", l: "PER Q" },
+              { v: "0", l: "NEG. MARK" },
+            ].map((s) => (
+              <div key={s.l} className="flex-1 text-center">
+                <p className="font-type text-lg font-bold leading-none text-blood">{s.v}</p>
+                <p className="mt-1 font-type text-[9px] tracking-[0.08em] text-faded">{s.l}</p>
+              </div>
+            ))}
           </section>
-          <BankCoverage />
-          <DossierCustody />
         </div>
       </main>
 

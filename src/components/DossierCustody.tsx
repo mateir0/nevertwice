@@ -19,8 +19,12 @@ function dossierFileName(now = new Date()): string {
  * DOSSIER CUSTODY — local export/import for the three persistent keys
  * (weakness + sessions + last-detail). The transient active-drill key is
  * never exported. No backend: a JSON download out, a file picker back in.
+ *
+ * CustodyBody is the bare control block (no card frame) so DOSSIER ADMIN
+ * can compose meter + custody in ONE card. DossierCustody keeps the
+ * standalone framed section.
  */
-export function DossierCustody() {
+export function CustodyBody() {
   const [status, setStatus] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -74,12 +78,8 @@ export function DossierCustody() {
   }
 
   return (
-    <section aria-label="Dossier custody" className="card">
-      <h2 className="font-display text-2xl tracking-wide text-parchment">DOSSIER CUSTODY</h2>
-      <p className="mt-1 font-type text-xs tracking-widest text-faded">
-        YOUR RECORD • KEEP IT SAFE
-      </p>
-      <div className="mt-4 grid grid-cols-2 gap-2">
+    <>
+      <div className="grid grid-cols-2 gap-2">
         <button onClick={onExport} className="btn-secondary flex items-center justify-center gap-2 text-sm">
           <Download className="h-4 w-4" aria-hidden="true" />
           EXPORT DOSSIER
@@ -108,6 +108,20 @@ export function DossierCustody() {
       <p className="mt-3 font-type text-xs leading-relaxed text-faded">
         Filed locally in this browser — export to keep it safe.
       </p>
+    </>
+  );
+}
+
+export function DossierCustody() {
+  return (
+    <section aria-label="Dossier custody" className="card">
+      <h2 className="font-display text-2xl tracking-wide text-parchment">DOSSIER CUSTODY</h2>
+      <p className="mt-1 font-type text-xs tracking-widest text-faded">
+        YOUR RECORD • KEEP IT SAFE
+      </p>
+      <div className="mt-4">
+        <CustodyBody />
+      </div>
     </section>
   );
 }

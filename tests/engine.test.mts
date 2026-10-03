@@ -502,7 +502,7 @@ describe("GAP 1 — dossier custody (export / import, no backend)", () => {
     assert.ok(!src.includes("ACTIVE_DRILL_KEY"), "transient drill key must be skipped");
     assert.ok(!src.includes("nevertwice:active-drill"), "transient drill key must be skipped");
     const app = fs.readFileSync(path.join(root, "src/app/app/page.tsx"), "utf8");
-    assert.ok(app.includes("DossierCustody"), "/app missing custody section");
+    assert.ok(app.includes("DossierCustody") || app.includes("DossierAdmin"), "/app missing custody section");
   });
 });
 
@@ -853,5 +853,64 @@ describe("TRAJECTORY — long-term improvement graph", () => {
     assert.ok(!src.includes("recharts") && !src.includes("chart.js"), "chart library leaked");
     const app = fs.readFileSync(path.join(root, "src/app/app/page.tsx"), "utf8");
     assert.ok(app.includes("<Trajectory"), "not wired into /app");
+  });
+});
+
+describe("/app layout hierarchy — drill first, heatmap above the fold", () => {
+  const root = path.resolve(process.cwd());
+  const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
+
+  it("wordmark hero deleted, drill headline cut, behaviors kept", () => {
+    const app = read("src/app/app/page.tsx");
+    assert.ok(!app.includes("Wordmark"), "wordmark hero still present");
+    assert.ok(!app.includes("RE-PREPARATION MODE"), "hero tagline still present");
+    assert.ok(!app.includes("QUESTIONS • TARGETED • PACED"), "giant drill headline still present");
+    assert.ok(app.includes("{plan.reason}"), "drill reason hook missing");
+    assert.ok(app.includes("GENERATING DRILL"), "drill loading state missing");
+    assert.ok(app.includes("PRINTING YOUR PAPER"), "mock loading state missing");
+    assert.ok(app.includes("OfflineBadge"), "offline badge missing");
+    assert.ok(app.includes("BEGIN DRILL") && app.includes("BEGIN MOCK"), "begin buttons missing");
+  });
+
+  it("order: drill → mock strip → heatmap → trajectory → sessions → admin → net strip → footer", () => {
+    const app = read("src/app/app/page.tsx");
+    const at = (s) => {
+      const i = app.indexOf(s);
+      assert.ok(i >= 0, `missing block: ${s}`);
+      return i;
+    };
+    const order = [
+      at('aria-label="Next drill"'),
+      at('aria-label="Full mock"'),
+      at("WEAKNESS HEATMAP"),
+      at("<Trajectory"),
+      at("<RecentSessions"),
+      at("<DossierAdmin"),
+      at('aria-label="NET format reference"'),
+      at("BUILT SO HE NEVER LOSES THE SAME MARK TWICE"),
+    ];
+    for (let i = 1; i < order.length; i++) {
+      assert.ok(order[i] > order[i - 1], `block ${i} out of order`);
+    }
+  });
+
+  it("heatmap topic row: one line, count never orphans", () => {
+    const src = read("src/components/WeaknessHeatmap.tsx");
+    assert.ok(src.includes("flex-nowrap"), "row can wrap");
+    assert.ok(src.includes("truncate"), "long topic has no shrink path");
+    assert.ok(src.includes("shrink-0") && src.includes("whitespace-nowrap"), "fault count can orphan");
+  });
+
+  it("dossier admin merges meter + custody; net strip is a strip, not a card", () => {
+    const app = read("src/app/app/page.tsx");
+    assert.ok(!app.includes("<BankCoverage") && !app.includes("<DossierCustody"), "two admin cards remain");
+    const admin = read("src/components/DossierAdmin.tsx");
+    assert.ok(admin.includes("DOSSIER ADMIN"), "no merged admin card");
+    assert.ok(admin.includes("CoverageMeterBody") && admin.includes("CustodyBody"), "meter + custody not composed");
+    const meter = read("src/components/BankCoverage.tsx");
+    assert.ok(meter.includes("DOSSIER COMPLETENESS"), "meter missing");
+    const custody = read("src/components/DossierCustody.tsx");
+    assert.ok(custody.includes("EXPORT DOSSIER") && custody.includes("Filed locally in this browser"), "custody missing");
+    assert.ok(app.includes("~54s") && app.includes("NEG. MARK"), "net minis missing");
   });
 });

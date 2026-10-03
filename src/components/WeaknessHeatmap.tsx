@@ -120,15 +120,15 @@ export function WeaknessHeatmap({
       <div className="space-y-5 border border-bronze/60 bg-night p-3 sm:p-4" role="list" aria-label="Threat board">
         {ordered.map((g) => (
           <div key={g.topic}>
-            <div className="mb-2 flex items-center gap-2">
+            <div className="mb-2 flex flex-nowrap items-center gap-2">
               <span
                 aria-hidden="true"
                 className="inline-block h-3 w-3 shrink-0 rounded-full border-2"
                 style={{ borderColor: "#A67C3D", backgroundColor: g.heat > 0 ? "#B3202C" : "#6B7F4E" }}
               />
-              <span className="font-type text-sm font-bold uppercase tracking-[0.18em] text-parchment">{g.topic}</span>
+              <span className="min-w-0 truncate font-type text-[13px] font-bold uppercase tracking-[0.14em] text-parchment">{g.topic}</span>
               <span aria-hidden="true" className="dossier-line min-w-4 flex-1" />
-              <span className="font-type text-[11px] uppercase tracking-[0.14em] text-faded">
+              <span className="shrink-0 whitespace-nowrap font-type text-[11px] uppercase tracking-[0.14em] text-faded">
                 {g.heat} FAULT{g.heat === 1 ? "" : "S"}
               </span>
             </div>

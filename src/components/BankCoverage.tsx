@@ -11,8 +11,12 @@ const BANK_SIZE = BANK_IDS.length;
  * DOSSIER COMPLETENESS — distinct bank questions ever dealt (timesSeen > 0)
  * over the full bank. Refreshes on mount, on storage events, and when the
  * tab regains focus (e.g. returning from a session).
+ *
+ * CoverageMeterBody is the bare meter (no card frame) so DOSSIER ADMIN can
+ * compose meter + custody in ONE card. BankCoverage keeps the standalone
+ * framed section.
  */
-export function BankCoverage() {
+export function CoverageMeterBody() {
   const [covered, setCovered] = useState(0);
 
   useEffect(() => {
@@ -29,7 +33,7 @@ export function BankCoverage() {
   const pct = BANK_SIZE > 0 ? Math.round((covered / BANK_SIZE) * 100) : 0;
 
   return (
-    <section aria-label="Dossier completeness" className="card">
+    <>
       <p className="label">BANK COVERAGE</p>
       <p className="font-display mt-1 text-2xl tracking-wide text-parchment">
         DOSSIER COMPLETENESS: {covered}/{BANK_SIZE} FILED
@@ -45,6 +49,14 @@ export function BankCoverage() {
         <div className="h-full bg-olive transition-all duration-300" style={{ width: `${pct}%` }} />
       </div>
       <p className="mt-2 font-type text-xs tracking-widest text-faded">{pct}% OF THE BANK SEEN</p>
+    </>
+  );
+}
+
+export function BankCoverage() {
+  return (
+    <section aria-label="Dossier completeness" className="card">
+      <CoverageMeterBody />
     </section>
   );
 }
