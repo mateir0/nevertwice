@@ -49,6 +49,9 @@ export interface Question {
   text: string;
   options: string[];
   correctIndex: number;
+  /** Post-answer debrief: 1–3 sentences naming the right option and why the
+   *  key distractor is wrong. Unicode math notation, never LaTeX. */
+  explanation: string;
   isPlaceholder: boolean;
 }
 

@@ -107,7 +107,8 @@ async function callGroq(prompt: string, apiKey: string, timeoutMs = 30000) {
           { role: "user", content: prompt },
         ],
         temperature: 0.4,
-        max_tokens: 2048,
+        // Explanations cost tokens; drills cap at 12 questions.
+        max_tokens: 4096,
       }),
       signal: controller.signal,
     });

@@ -32,6 +32,35 @@
   to { opacity: 1; transform: scale(1) rotate(-8deg); }
 }
 
+/* ---- Motion: paper sliding + a stamp hitting. Quick, decisive, no bounce. ---- */
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes staggerFade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shakeX {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+@keyframes debriefIn {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 800px; }
+}
+
 /* ---- Dossier custom utilities ---- */
 
 @utility bronze-frame {
@@ -60,6 +89,32 @@
 
 @utility stamp {
   animation: stamp-in 400ms ease-out both;
+}
+
+/* Question card slides in when the question changes (key={question.id}). */
+@utility card-in {
+  animation: cardIn 320ms ease-out both;
+}
+
+/* Options + classification chips fade in; 40ms stagger set inline. */
+@utility stagger-fade {
+  animation: staggerFade 300ms ease-out both;
+}
+
+/* ✓/✗ badges */
+@utility pop-in {
+  animation: popIn 200ms ease-out both;
+}
+
+/* Wrong-picked option */
+@utility shake-x {
+  animation: shakeX 300ms ease-out both;
+}
+
+/* DEBRIEF panel */
+@utility debrief-in {
+  animation: debriefIn 400ms ease both;
+  overflow: hidden;
 }
 
 /* Film grain over the whole page */
@@ -286,5 +341,13 @@
     opacity: 0.85;
     mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     mask-size: 120px;
+  }
+}
+
+/* Respect users who ask for less motion: kill every animation + transition. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
   }
 }

@@ -82,11 +82,24 @@ describe("MEDIUM 7 — strict validator enforces distinct options", () => {
   });
 
   it("accepts well-formed items and still rejects other violations", () => {
-    const ok = JSON.stringify([{ text: "Q?", options: ["A", "B", "C", "D"], correctIndex: 2 }]);
-    assert.deepEqual(parseStrictDrillJson(ok), [{ text: "Q?", options: ["A", "B", "C", "D"], correctIndex: 2 }]);
+    const ok = JSON.stringify([{ text: "Q?", options: ["A", "B", "C", "D"], correctIndex: 2, explanation: "C is right because the key step applies." }]);
+    assert.deepEqual(parseStrictDrillJson(ok), [{ text: "Q?", options: ["A", "B", "C", "D"], correctIndex: 2, explanation: "C is right because the key step applies." }]);
     assert.throws(() => parseStrictDrillJson(JSON.stringify([{ text: "Q?", options: ["A", "B", "C"], correctIndex: 0 }])), /bad options/);
     assert.throws(() => parseStrictDrillJson(JSON.stringify([{ text: "Q?", options: ["A", "B", "C", "D"], correctIndex: 4 }])), /bad correctIndex/);
     assert.throws(() => parseStrictDrillJson("no json here"), /no JSON array/);
+  });
+
+  it("rejects missing/empty explanations and accepts a valid one", () => {
+    const missing = JSON.stringify([{ text: "Q?", options: ["A", "B", "C", "D"], correctIndex: 1 }]);
+    assert.throws(() => parseStrictDrillJson(missing), /bad explanation/);
+    const empty = JSON.stringify([{ text: "Q?", options: ["A", "B", "C", "D"], correctIndex: 1, explanation: "   " }]);
+    assert.throws(() => parseStrictDrillJson(empty), /bad explanation/);
+    const nonString = JSON.stringify([{ text: "Q?", options: ["A", "B", "C", "D"], correctIndex: 1, explanation: 42 }]);
+    assert.throws(() => parseStrictDrillJson(nonString), /bad explanation/);
+    const ok = JSON.stringify([{ text: "Q?", options: ["A", "B", "C", "D"], correctIndex: 1, explanation: "B is right because of the formula x²." }]);
+    assert.deepEqual(parseStrictDrillJson(ok), [
+      { text: "Q?", options: ["A", "B", "C", "D"], correctIndex: 1, explanation: "B is right because of the formula x²." },
+    ]);
   });
 });
 
@@ -102,6 +115,7 @@ describe("CRITICAL 3 — Groq path shuffles + prompt spreads the key", () => {
       text: `Groq Q${i}?`,
       options: ["CORRECT", "W1", "W2", "W3"],
       correctIndex: 0,
+      explanation: `Because the key step is ${i}.`,
     }));
     const out = withSeededRandom(7, () => assignToSlots(gen, targets));
     assert.equal(out.length, 2000);
@@ -354,8 +368,8 @@ describe("topic/subtopic pair atomicity — builders can never emit a mismatched
       }
       const slots = assignToSlots(
         [
-          { text: "G1?", options: ["A", "B", "C", "D"], correctIndex: 0 },
-          { text: "G2?", options: ["A", "B", "C", "D"], correctIndex: 1 },
+          { text: "G1?", options: ["A", "B", "C", "D"], correctIndex: 0, explanation: "Because A." },
+          { text: "G2?", options: ["A", "B", "C", "D"], correctIndex: 1, explanation: "Because B." },
         ],
         [{ topic: t.topic, subtopic: t.subtopic, errorType: "concept-gap", count: 2 }],
       );

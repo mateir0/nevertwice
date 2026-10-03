@@ -53,6 +53,7 @@ export interface RawGenerated {
   text: string;
   options: string[];
   correctIndex: number;
+  explanation: string;
 }
 
 const ERROR_RULES: Record<ErrorType, string> = {
@@ -83,8 +84,10 @@ export function buildDrillPrompt(targets: DrillGenTarget[]): string {
     brief,
     "",
     "STRICT OUTPUT CONTRACT. Respond with ONLY a raw JSON array, no markdown, no code fences, no commentary.",
-    "Each element must be exactly: {\"text\": string, \"options\": [4 distinct strings], \"correctIndex\": 0|1|2|3}.",
+    "Each element must be exactly: {\"text\": string, \"options\": [4 distinct strings], \"correctIndex\": 0|1|2|3, \"explanation\": string}.",
     "Every question needs exactly 4 options and exactly one correct answer.",
+    "explanation: 1-3 sentences. Name the correct option, give the key step or formula, and say why the most tempting distractor is wrong. Unicode math notation (x², √, π), never LaTeX.",
+    "The app reshuffles options at runtime, so refer to the correct option by its content — never by the letter A/B/C/D.",
     "Distribute the correct answer uniformly across positions 0–3 — do not cluster it on one letter.",
     "Write each question as a real exam stem. Never prefix with 'Drill', 'Practice', or topic names.",
     "Use Unicode math notation directly — superscripts (x², x³), √, π, θ, ×, ÷, ±, →, ∞. Never caret notation, LaTeX, backslashes, or \\( \\) delimiters.",
@@ -114,7 +117,15 @@ export function parseStrictDrillJson(raw: string): RawGenerated[] {
     // key onto a distractor. Reject the whole item instead.
     const seen = new Set(options.map((o) => o.toLowerCase().replace(/\s+/g, " ").trim()));
     if (seen.size !== 4) throw new Error(`item ${i} duplicate options`);
-    return { text: (rec.text as string).trim(), options, correctIndex: rec.correctIndex as number };
+    if (typeof rec.explanation !== "string" || rec.explanation.trim().length === 0) {
+      throw new Error(`item ${i} bad explanation`);
+    }
+    return {
+      text: (rec.text as string).trim(),
+      options,
+      correctIndex: rec.correctIndex as number,
+      explanation: (rec.explanation as string).trim(),
+    };
   });
 }
 
@@ -185,6 +196,7 @@ export function buildDrillFallback(targets: DrillGenTarget[]): Question[] {
           text,
           options: [...pick.options],
           correctIndex: pick.correctIndex,
+          explanation: sanitizeStem(pick.explanation),
           isPlaceholder: false,
         }),
       );
@@ -221,6 +233,7 @@ export function assignToSlots(generated: RawGenerated[], targets: DrillGenTarget
       text: sanitizeStem(g.text),
       options: g.options.map((o) => sanitizeStem(o)),
       correctIndex: g.correctIndex,
+      explanation: sanitizeStem(g.explanation),
       isPlaceholder: false,
     } satisfies Question);
   });

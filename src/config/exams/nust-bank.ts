@@ -27,6 +27,7 @@ export const nustBank: Question[] = [
     text: "The roots of x² − 5x + 6 = 0 are:",
     options: ["2 and 3", "1 and 6", "−2 and −3", "0 and 5"],
     correctIndex: 0,
+    explanation: "Factorising x²−5x+6 as (x−2)(x−3)=0 gives the solutions x=2 and x=3. The pair 2 and 3 satisfies both the product (2×3=6) and the sum (2+3=5), whereas the pair 1 and 6 has product 6 but sum 7, so it does not satisfy the equation.",
     isPlaceholder: false,
   },
   {
@@ -37,6 +38,7 @@ export const nustBank: Question[] = [
     text: "The quadratic equation with roots 3 and −2 is:",
     options: ["x² − x − 6 = 0", "x² + x − 6 = 0", "x² − x + 6 = 0", "x² + x + 6 = 0"],
     correctIndex: 0,
+    explanation: "Since the roots are 3 and –2, the monic quadratic is (x−3)(x+2)=x²−x−6, so the equation x²−x−6=0 is correct; the alternative with a plus sign before the constant gives x²±x+6 which would have product +6, not –6, thus cannot yield roots 3 and –2.",
     isPlaceholder: false,
   },
   {
@@ -47,6 +49,7 @@ export const nustBank: Question[] = [
     text: "The discriminant of 2x² − 4x + 1 = 0 is:",
     options: ["8", "0", "−8", "16"],
     correctIndex: 0,
+    explanation: "The discriminant D = b² − 4ac = (−4)² − 4·2·1 = 16 − 8 = 8, so the value is 8; the option “0” would imply a double root, but here the roots are distinct because D ≠ 0.",
     isPlaceholder: false,
   },
   {
@@ -57,6 +60,7 @@ export const nustBank: Question[] = [
     text: "If x² + kx + 9 = 0 has equal roots, then k =:",
     options: ["±6", "6 only", "−6 only", "±3"],
     correctIndex: 0,
+    explanation: "Since equal roots require the discriminant b²−4ac to be zero, we have k²−4·1·9=0 ⇒ k²=36 ⇒ k=±6. The choice “6 only” is incorrect because the negative value also satisfies the discriminant condition.",
     isPlaceholder: false,
   },
   {
@@ -67,6 +71,7 @@ export const nustBank: Question[] = [
     text: "The 5th term of the geometric sequence 2, 6, 18, … is:",
     options: ["162", "54", "486", "108"],
     correctIndex: 0,
+    explanation: "The common ratio is 6 ÷ 2 = 3, so the nth term is aₙ = 2·3ⁿ⁻¹; for n = 5 we get a₅ = 2·3⁴ = 2·81 = 162. The distractor 54 comes from using n = 4 instead of 5, while 486 and 108 result from using a wrong ratio or mis‑calculating the power.",
     isPlaceholder: false,
   },
   {
@@ -77,6 +82,7 @@ export const nustBank: Question[] = [
     text: "The sum of the infinite geometric series 1 + 1/2 + 1/4 + … is:",
     options: ["2", "1", "3/2", "4"],
     correctIndex: 0,
+    explanation: "The series is geometric with first term 1 and common ratio ½, so its sum is S = 1 ÷ (1 − ½) = 2; the choice “2” is therefore correct. A common mistake is to think the sum equals the first term, which would give 1, but that ignores the contribution of the remaining terms.",
     isPlaceholder: false,
   },
   {
@@ -87,6 +93,7 @@ export const nustBank: Question[] = [
     text: "The value of i⁴ is:",
     options: ["1", "i", "−1", "−i"],
     correctIndex: 0,
+    explanation: "Since i² = −1, raising both sides to the second power gives (i²)² = (−1)², so i⁴ = 1; the choice “1” is therefore correct. A common mistake is to think i⁴ equals −1 by confusing i⁴ with i², but squaring −1 yields +1, not −1.",
     isPlaceholder: false,
   },
   {
@@ -97,6 +104,7 @@ export const nustBank: Question[] = [
     text: "The modulus of 3 + 4i is:",
     options: ["5", "7", "12", "25"],
     correctIndex: 0,
+    explanation: "The modulus of a complex number a + bi is √(a² + b²); here √(3² + 4²)=√(9 + 16)=√25=5, so the answer is 5. A common wrong choice like 7 would require √(a² + b²)=7, i.e. a² + b²=49, which does not hold for 3 and 4.",
     isPlaceholder: false,
   },
   {
@@ -107,6 +115,7 @@ export const nustBank: Question[] = [
     text: "The determinant of [[2, 0], [0, 3]] is:",
     options: ["6", "5", "0", "1"],
     correctIndex: 0,
+    explanation: "The determinant of a 2×2 diagonal matrix is the product of its diagonal entries, so det[[2,0],[0,3]] = 2 × 3 = 6. The answer 5 is tempting if one mistakenly adds the entries, but addition is not the determinant rule. The other options 0 and 1 are incorrect because the matrix is invertible and its determinant is not unity.",
     isPlaceholder: false,
   },
   {
@@ -117,6 +126,7 @@ export const nustBank: Question[] = [
     text: "Adding [[1, 2], [3, 4]] and [[0, 1], [1, 0]] gives:",
     options: ["[[1, 3], [4, 4]]", "[[1, 2], [3, 4]]", "[[0, 2], [3, 0]]", "[[1, 1], [2, 4]]"],
     correctIndex: 0,
+    explanation: "Add the two matrices element‑wise: (1+0, 2+1) gives the first row (1, 3) and (3+1, 4+0) gives the second row (4, 4), so the result is [[1, 3], [4, 4]]. The choice that repeats the first matrix [[1, 2], [3, 4]] is wrong because it ignores the contribution of the second matrix.",
     isPlaceholder: false,
   },
 
@@ -129,6 +139,7 @@ export const nustBank: Question[] = [
     text: "d/dx (x³) equals:",
     options: ["3x²", "x²", "3x", "x³/3"],
     correctIndex: 0,
+    explanation: "Apply the power rule d/dx xⁿ = n·xⁿ⁻¹, so d/dx x³ = 3·x². The option “3x²” is correct, while “x²” omits the necessary factor 3, making it incorrect.",
     isPlaceholder: false,
   },
   {
@@ -139,6 +150,7 @@ export const nustBank: Question[] = [
     text: "d/dx (sin x) equals:",
     options: ["cos x", "−cos x", "−sin x", "tan x"],
     correctIndex: 0,
+    explanation: "Using the limit definition d/dx sin x = limₕ→0 [sin(x+h)−sin x]/h gives cos x, which is the standard derivative formula for the sine function. The tempting choice “−cos x” is actually the derivative of cos x, not of sin x.",
     isPlaceholder: false,
   },
   {
@@ -149,6 +161,7 @@ export const nustBank: Question[] = [
     text: "d/dx (eˣ) equals:",
     options: ["eˣ", "x eˣ⁻¹", "1", "ln x"],
     correctIndex: 0,
+    explanation: "The derivative of the exponential function eˣ is itself, so d/dx (eˣ)=eˣ by the fundamental rule d/dx (aˣ)=aˣ·ln a with a=e (ln e=1). The choice “x eˣ⁻¹” would be the result of differentiating x·eˣ, not eˣ alone, and “1” or “ln x” are derivatives of x and ln x respectively, not of eˣ.",
     isPlaceholder: false,
   },
   {
@@ -159,6 +172,7 @@ export const nustBank: Question[] = [
     text: "∫ 2x dx equals:",
     options: ["x² + C", "2 + C", "x + C", "2x² + C"],
     correctIndex: 0,
+    explanation: "Using the power rule ∫ k xⁿ dx = k xⁿ⁺¹/(n+1)+C with n=1 gives ∫ 2x dx = 2·x²/2 + C = x² + C, so the answer x² + C is correct. The tempting choice 2 + C treats the integrand as a constant rather than applying the power rule, which is why it is wrong.",
     isPlaceholder: false,
   },
   {
@@ -169,6 +183,7 @@ export const nustBank: Question[] = [
     text: "∫ cos x dx equals:",
     options: ["sin x + C", "−sin x + C", "cos x + C", "−cos x + C"],
     correctIndex: 0,
+    explanation: "Since d/dx (sin x)=cos x, the antiderivative of cos x is sin x plus a constant, i.e. sin x + C. The tempting choice “−sin x + C” is incorrect because its derivative is −cos x, not cos x.",
     isPlaceholder: false,
   },
   {
@@ -179,6 +194,7 @@ export const nustBank: Question[] = [
     text: "lim (x→0) (sin x)/x equals:",
     options: ["1", "0", "∞", "−1"],
     correctIndex: 0,
+    explanation: "Using the standard limit limₓ→0 (sin x)/x = 1, which follows from the squeeze theorem or the small‑angle approximation sin x ≈ x. The value 1 is obtained because the numerator and denominator approach zero at the same rate, while the other choices give either zero, infinity, or a negative sign, which contradict the known behavior of sin x near zero.",
     isPlaceholder: false,
   },
   {
@@ -189,6 +205,7 @@ export const nustBank: Question[] = [
     text: "lim (x→3) (x² − 9)/(x − 3) equals:",
     options: ["6", "3", "9", "0"],
     correctIndex: 0,
+    explanation: "Factor the numerator: (x²−9)=(x−3)(x+3), cancel the (x−3) with the denominator and then evaluate the remaining expression at x→3, giving 3+3=6. The answer 6 follows directly from the limit after simplification. The tempting choice 3 would result from incorrectly substituting x=3 before canceling, which leaves the indeterminate form 0÷0.",
     isPlaceholder: false,
   },
   {
@@ -199,6 +216,7 @@ export const nustBank: Question[] = [
     text: "The order of d²y/dx² + 4 dy/dx + 3y = 0 is:",
     options: ["2", "1", "3", "0"],
     correctIndex: 0,
+    explanation: "The order of a differential equation is the highest derivative that appears, and since d²y/dx² is present the order is 2. Hence the correct answer is 2. The option “1” may seem plausible because a first‑derivative term is also there, but the second‑derivative term determines the overall order.",
     isPlaceholder: false,
   },
   {
@@ -209,6 +227,7 @@ export const nustBank: Question[] = [
     text: "dy/dx = 3x² with y(0) = 1 has the solution:",
     options: ["y = x³ + 1", "y = x³", "y = x³ − 1", "y = 3x³ + 1"],
     correctIndex: 0,
+    explanation: "Integrating dy/dx = 3x² gives y = x³ + C, and using the condition y(0)=1 yields C = 1, so the solution is y = x³ + 1; the choice y = x³ fails the initial condition because it would give y(0)=0.",
     isPlaceholder: false,
   },
 
@@ -221,6 +240,7 @@ export const nustBank: Question[] = [
     text: "The slope of y = 2x + 3 is:",
     options: ["2", "3", "−2", "1/2"],
     correctIndex: 0,
+    explanation: "For a line written in the form y = mx + b the coefficient m is the slope, so from y = 2x + 3 the slope is 2. The intercept 3 is often confused with the slope, and the other numbers –2 and ½ are unrelated to the coefficient of x.",
     isPlaceholder: false,
   },
   {
@@ -231,6 +251,7 @@ export const nustBank: Question[] = [
     text: "The distance between (0, 0) and (3, 4) is:",
     options: ["5", "7", "12", "25"],
     correctIndex: 0,
+    explanation: "The distance between (0, 0) and (3, 4) is √[(3−0)²+(4−0)²]=√(9+16)=√25=5, so the correct answer is 5. A common mistake is to add the coordinates (3+4) and think the distance is 7, but the distance formula requires squaring and summing, not simple addition.",
     isPlaceholder: false,
   },
   {
@@ -241,6 +262,7 @@ export const nustBank: Question[] = [
     text: "The equation of a circle with center (0, 0) and radius 5 is:",
     options: ["x² + y² = 25", "x² + y² = 5", "(x − 5)² + y² = 0", "x + y = 5"],
     correctIndex: 0,
+    explanation: "For a circle centred at the origin the equation is x² + y² = r², so with radius 5 we obtain x² + y² = 25. The choice x² + y² = 5 would give radius √5, while (x − 5)² + y² = 0 describes a single point and x + y = 5 is a straight line, not a circle.",
     isPlaceholder: false,
   },
   {
@@ -251,6 +273,7 @@ export const nustBank: Question[] = [
     text: "The eccentricity of a circle is:",
     options: ["0", "1", "∞", "2"],
     correctIndex: 0,
+    explanation: "For a circle the semi‑major and semi‑minor axes are equal (a = b), so the eccentricity e = √(1 − b²⁄a²) = √(1 − 1) = 0. The value 1 applies to a parabola, not a circle, so it is the tempting but incorrect choice.",
     isPlaceholder: false,
   },
   {
@@ -261,6 +284,7 @@ export const nustBank: Question[] = [
     text: "A parabola y² = 4ax with a > 0 opens toward the:",
     options: ["right", "left", "top", "bottom"],
     correctIndex: 0,
+    explanation: "Since y² = 4a x can be rewritten as x = y²/(4a) and a>0, x is non‑negative and grows as y², so the curve extends into the positive x‑direction, i.e., it opens toward the right. The left‑opening option would require a negative coefficient (a<0), which contradicts the given condition a>0.",
     isPlaceholder: false,
   },
   {
@@ -271,6 +295,7 @@ export const nustBank: Question[] = [
     text: "The dot product of (1, 0) and (0, 1) is:",
     options: ["0", "1", "2", "−1"],
     correctIndex: 0,
+    explanation: "The dot product is computed as (1,0)·(0,1)=1×0+0×1=0, because the vectors are orthogonal. The result 0 is correct, while the value 1 would arise only if the vectors had a component in the same direction, which they do not.",
     isPlaceholder: false,
   },
 
@@ -282,6 +307,7 @@ export const nustBank: Question[] = [
     text: "The magnitude of the vector (3, 4) is:",
     options: ["5", "7", "12", "25"],
     correctIndex: 0,
+    explanation: "The magnitude of a vector (x, y) is √(x² + y²); here √(3² + 4²)=√(9 + 16)=√25=5, so the answer is 5. The distractor 7 comes from adding the components (3+4) instead of using the Pythagorean formula, which is incorrect.",
     isPlaceholder: false,
   },
 
@@ -294,6 +320,7 @@ export const nustBank: Question[] = [
     text: "sin² x + cos² x equals:",
     options: ["1", "0", "2", "tan x"],
     correctIndex: 0,
+    explanation: "Using the Pythagorean identity sin²x + cos²x = 1, the sum of the squared sine and cosine of any angle always equals 1. The other choices are incorrect because the expression is never identically 0, 2, or equal to tan x for all x.",
     isPlaceholder: false,
   },
   {
@@ -304,6 +331,7 @@ export const nustBank: Question[] = [
     text: "1 + tan² x equals:",
     options: ["sec² x", "cos² x", "sin² x", "csc² x"],
     correctIndex: 0,
+    explanation: "Using the Pythagorean identity sin²x + cos²x = 1 and dividing every term by cos²x yields 1 + tan²x = sec²x. Therefore the given expression equals sec²x. The tempting choice cos²x is actually the reciprocal of sec²x, so it does not satisfy the identity.",
     isPlaceholder: false,
   },
   {
@@ -314,6 +342,7 @@ export const nustBank: Question[] = [
     text: "One solution of sin x = 0 is:",
     options: ["x = 0", "x = π/2", "x = π/4", "x = π/3"],
     correctIndex: 0,
+    explanation: "Since sin x equals zero only when x is an integer multiple of π, substituting x = 0 gives sin 0 = 0, satisfying the equation. The other choices (π⁄2, π⁄4, π⁄3) yield sin values of 1, √2⁄2 and √3⁄2 respectively, none of which are zero, so they are incorrect.",
     isPlaceholder: false,
   },
   {
@@ -324,6 +353,7 @@ export const nustBank: Question[] = [
     text: "If sin θ = 1/2 with θ acute, then θ =:",
     options: ["30°", "60°", "45°", "90°"],
     correctIndex: 0,
+    explanation: "Since sin θ = 1/2 and θ is acute, the reference angle whose sine is 1/2 is 30°, so θ = 30°. The common distractor 60° is incorrect because sin 60° = √3⁄2, not 1/2.",
     isPlaceholder: false,
   },
   {
@@ -334,6 +364,7 @@ export const nustBank: Question[] = [
     text: "In a right triangle with opposite 3 and hypotenuse 5, sin θ =:",
     options: ["3/5", "4/5", "5/3", "3/4"],
     correctIndex: 0,
+    explanation: "Since sin θ is defined as opposite ÷ hypotenuse, with opposite = 3 and hypotenuse = 5 we get sin θ = 3⁄5. The choice 4⁄5 would correspond to an opposite side of length 4, which does not match the given triangle.",
     isPlaceholder: false,
   },
   {
@@ -344,6 +375,7 @@ export const nustBank: Question[] = [
     text: "A right triangle has legs 3 and 4. Its hypotenuse is:",
     options: ["5", "7", "12", "25"],
     correctIndex: 0,
+    explanation: "Using the Pythagorean theorem, 3² + 4² = 9 + 16 = 25, so the hypotenuse is √25 = 5. The answer “5” satisfies the equation, while a value such as 7 would give 7² = 49, which does not equal 3² + 4². Hence the correct length is 5.",
     isPlaceholder: false,
   },
 
@@ -356,6 +388,7 @@ export const nustBank: Question[] = [
     text: "A fair die is rolled. The probability of a 4 is:",
     options: ["1/6", "1/4", "1/3", "1/2"],
     correctIndex: 0,
+    explanation: "The probability of rolling a 4 on a fair six‑sided die is the number of favorable outcomes (one face showing 4) divided by the total number of equally likely outcomes (six faces), giving 1÷6. A common mistake is to choose 1÷4, which would be correct only if four faces were favorable, but only one face shows a 4. Hence the correct answer is 1/6.",
     isPlaceholder: false,
   },
   {
@@ -366,6 +399,7 @@ export const nustBank: Question[] = [
     text: "A fair coin is tossed twice. The probability of two heads is:",
     options: ["1/4", "1/2", "3/4", "1/8"],
     correctIndex: 0,
+    explanation: "The sample space for two tosses has 4 equally likely outcomes (HH, HT, TH, TT), so the probability of the single favorable outcome HH is 1 ÷ 4 = 1/4. The answer “1/4” follows directly from counting outcomes. The tempting “1/2” would be the probability of getting at least one head, not two heads, so it is incorrect.",
     isPlaceholder: false,
   },
   {
@@ -376,6 +410,7 @@ export const nustBank: Question[] = [
     text: "A fair coin tossed 100 times: the expected number of heads is:",
     options: ["50", "100", "25", "0"],
     correctIndex: 0,
+    explanation: "The expected number of heads in n independent fair‑coin tosses is n × p, where p=½, so for 100 tosses the expectation is 100 × ½ = 50. The answer “100” would be the total number of tosses, not the expected count of heads, and “25” or “0” ignore the ½ probability of a head on each toss.",
     isPlaceholder: false,
   },
   {
@@ -386,6 +421,7 @@ export const nustBank: Question[] = [
     text: "A binomial experiment has n = 20 trials with success probability 1/2. The expected number of successes is:",
     options: ["10", "20", "5", "1"],
     correctIndex: 0,
+    explanation: "The mean of a binomial B(n,p) is μ = n·p, so with n = 20 and p = ½ we get μ = 20×½ = 10; thus the expected number of successes is 10. The answer “20” would be the total number of trials, not the expected count, so it is wrong.",
     isPlaceholder: false,
   },
 
@@ -398,6 +434,7 @@ export const nustBank: Question[] = [
     text: "A body at rest accelerates at 2 m/s² for 3 s. Its final velocity is:",
     options: ["6 m/s", "3 m/s", "9 m/s", "12 m/s"],
     correctIndex: 0,
+    explanation: "Using v = u + a t with initial speed u = 0, acceleration a = 2 m/s² and time t = 3 s gives v = 0 + 2×3 = 6 m/s, so the correct value is 6 m/s; the choice 9 m/s results from mistakenly multiplying the acceleration by the time squared instead of just the time.",
     isPlaceholder: false,
   },
   {
@@ -408,6 +445,7 @@ export const nustBank: Question[] = [
     text: "The area under a velocity-time graph gives:",
     options: ["displacement", "acceleration", "force", "momentum"],
     correctIndex: 0,
+    explanation: "The area under a velocity‑time graph equals the integral of velocity with respect to time, ∫ v dt, which gives the displacement of the object. Acceleration would be obtained from the slope of the graph, not its area, so the choice “acceleration” is a distractor. Similarly, force and momentum are unrelated to the area under a v‑t plot.",
     isPlaceholder: false,
   },
   {
@@ -418,6 +456,7 @@ export const nustBank: Question[] = [
     text: "A 2 kg mass under a 10 N net force accelerates at:",
     options: ["5 m/s²", "20 m/s²", "2 m/s²", "0.2 m/s²"],
     correctIndex: 0,
+    explanation: "Using Newton’s second law a = F ÷ m, the acceleration is 10 N ÷ 2 kg = 5 m/s², so the correct value is 5 m/s². A common error is to obtain 20 m/s² by mistakenly using a smaller mass; the given mass is 2 kg, not 0.5 kg, so that result is incorrect.",
     isPlaceholder: false,
   },
   {
@@ -428,6 +467,7 @@ export const nustBank: Question[] = [
     text: "Action and reaction forces are:",
     options: ["equal and opposite", "equal and in the same direction", "unequal and opposite", "unequal and in the same direction"],
     correctIndex: 0,
+    explanation: "Newton’s third law states that for every force exerted by one body on another there is a reaction force of the same magnitude but opposite direction, so the pair are equal and opposite. The distractor “equal and in the same direction” is wrong because two forces acting on the same object cannot cancel each other if they point the same way; they would add instead of balance.",
     isPlaceholder: false,
   },
   {
@@ -438,6 +478,7 @@ export const nustBank: Question[] = [
     text: "100 J of work done in 20 s is a power of:",
     options: ["5 W", "2000 W", "120 W", "80 W"],
     correctIndex: 0,
+    explanation: "Power is work divided by time, so P = 100 J ÷ 20 s = 5 W; thus the answer is 5 W. The distractor 2000 W would require the same work in only 0.05 s, which is not the given interval, and the other values do not satisfy the division.",
     isPlaceholder: false,
   },
   {
@@ -448,6 +489,7 @@ export const nustBank: Question[] = [
     text: "A 2 kg mass moving at 3 m/s has kinetic energy of:",
     options: ["9 J", "6 J", "18 J", "3 J"],
     correctIndex: 0,
+    explanation: "The kinetic energy is found from KE = ½ m v², so KE = ½ × 2 kg × (3 m/s)² = 9 J; the answer “9 J” is correct. A common mistake is to omit the square on the speed, which would give ½ × 2 × 3 = 3 J or to use m v² without the ½ factor, giving 18 J, both of which are wrong.",
     isPlaceholder: false,
   },
   {
@@ -458,6 +500,7 @@ export const nustBank: Question[] = [
     text: "The SI unit of torque is:",
     options: ["N·m", "N/m", "J/s", "N·s"],
     correctIndex: 0,
+    explanation: "Torque is defined as the cross‑product of force and lever arm (τ = r × F), so its unit is newton‑metre (N·m). A newton per metre (N/m) would be a force density, not a rotational effect, and joule per second (J/s) is power, while newton‑second (N·s) is impulse. Hence the correct SI unit is N·m.",
     isPlaceholder: false,
   },
   {
@@ -468,6 +511,7 @@ export const nustBank: Question[] = [
     text: "Angular momentum is conserved when the net external torque is:",
     options: ["zero", "maximum", "constant and nonzero", "infinite"],
     correctIndex: 0,
+    explanation: "Since the external torque τ equals the time derivative of angular momentum (τ = dL/dt), setting τ to zero makes dL/dt = 0 so L remains constant and angular momentum is conserved. A constant non‑zero torque would give dL/dt ≠ 0, causing L to change, so it does not satisfy conservation.",
     isPlaceholder: false,
   },
   {
@@ -478,6 +522,7 @@ export const nustBank: Question[] = [
     text: "The gravitational force between two masses quadruples when the distance between them is:",
     options: ["halved", "doubled", "quadrupled", "left unchanged"],
     correctIndex: 0,
+    explanation: "Since F = G·m₁·m₂ ÷ r², making the force four times larger requires the denominator to become one‑fourth of its original value, which occurs when the separation r is reduced to r÷2 (because (r÷2)² = r²÷4). Halving the distance therefore quadruples the gravitational attraction. The choice “doubled” would instead make r² four times larger and the force only one‑quarter of its original value.",
     isPlaceholder: false,
   },
   {
@@ -488,6 +533,7 @@ export const nustBank: Question[] = [
     text: "The value of g at the centre of the Earth is:",
     options: ["zero", "9.8 m/s²", "maximum", "infinite"],
     correctIndex: 0,
+    explanation: "Inside a uniform spherical Earth the gravitational field at distance r from the centre is g(r)=g_surface·(r/R), so at r=0 the field vanishes, giving zero. The surface value 9.8 m/s² applies only at r=R, not at the centre, and the field cannot be maximum or infinite there.",
     isPlaceholder: false,
   },
 
@@ -500,6 +546,7 @@ export const nustBank: Question[] = [
     text: "The first law of thermodynamics is a statement of conservation of:",
     options: ["energy", "momentum", "charge", "mass"],
     correctIndex: 0,
+    explanation: "The first law states ΔU = Q − W, meaning the internal energy change of a system equals heat added minus work done, which is a direct statement of energy conservation. It does not refer to momentum, charge or mass, so the choice “energy” is correct, while the tempting distractor “mass” is wrong because mass is not conserved in thermodynamic processes (it can be converted to energy).",
     isPlaceholder: false,
   },
   {
@@ -510,6 +557,7 @@ export const nustBank: Question[] = [
     text: "An ideal gas is compressed isothermally. Its internal energy:",
     options: ["stays the same", "increases", "decreases", "becomes zero"],
     correctIndex: 0,
+    explanation: "For an ideal gas the internal energy U depends only on temperature, U = n Cᵥ T, so in an isothermal compression T is constant and U does not change. The tempting choice that it increases would apply only if the temperature rose, which does not happen in an isothermal process. Hence the internal energy stays the same.",
     isPlaceholder: false,
   },
   {
@@ -520,6 +568,7 @@ export const nustBank: Question[] = [
     text: "The average kinetic energy of an ideal gas molecule is proportional to:",
     options: ["absolute temperature", "pressure", "volume", "mass only"],
     correctIndex: 0,
+    explanation: "The average kinetic energy of a molecule in an ideal gas is given by 〈E_k〉 = 3⁄2 k_B T, showing it is directly proportional to the absolute temperature T. Pressure depends on both temperature and density, so it is not a simple proportionality; volume and mass alone likewise do not determine the kinetic energy.",
     isPlaceholder: false,
   },
   {
@@ -530,6 +579,7 @@ export const nustBank: Question[] = [
     text: "The SI unit of heat is:",
     options: ["joule", "watt", "newton", "degree Celsius"],
     correctIndex: 0,
+    explanation: "Heat is a form of energy, and the SI unit of energy is the joule, so heat is measured in joules. The watt measures power (joule per second), not energy itself, and newton and degree Celsius measure force and temperature respectively, not heat.",
     isPlaceholder: false,
   },
 
@@ -542,6 +592,7 @@ export const nustBank: Question[] = [
     text: "Two like charges:",
     options: ["repel each other", "attract each other", "cancel each other", "exert no force"],
     correctIndex: 0,
+    explanation: "According to Coulomb’s law F = k q₁ q₂ ÷ r², the force magnitude depends on the product of the charges; when q₁ and q₂ have the same sign the product is positive and the force is directed outward, so the charges repel. The distractor that they attract is wrong because attraction occurs only when the charges have opposite signs, giving a negative product.",
     isPlaceholder: false,
   },
   {
@@ -552,6 +603,7 @@ export const nustBank: Question[] = [
     text: "The electric field inside a hollow charged conductor is:",
     options: ["zero", "maximum", "uniform and nonzero", "infinite"],
     correctIndex: 0,
+    explanation: "In electrostatic equilibrium all excess charge resides on the outer surface, so a Gaussian surface drawn inside the cavity encloses no charge and Gauss’s law gives net flux = 0, implying the electric field is zero everywhere inside. The “maximum” or “uniform non‑zero” choices are wrong because any internal field would cause charges to move until it is cancelled.",
     isPlaceholder: false,
   },
   {
@@ -562,6 +614,7 @@ export const nustBank: Question[] = [
     text: "A 12 V source across a 4 Ω resistor produces a current of:",
     options: ["3 A", "48 A", "8 A", "16 A"],
     correctIndex: 0,
+    explanation: "Using Ohm’s law I = V ÷ R, the current is 12 V ÷ 4 Ω = 3 A, so the correct answer is 3 A. The distractor 48 A results from mistakenly multiplying voltage by resistance (12 × 4) instead of dividing, which gives a value far larger than the true current.",
     isPlaceholder: false,
   },
   {
@@ -572,6 +625,7 @@ export const nustBank: Question[] = [
     text: "Three 2 Ω resistors in series have a total resistance of:",
     options: ["6 Ω", "2/3 Ω", "3/2 Ω", "1 Ω"],
     correctIndex: 0,
+    explanation: "In a series circuit the resistances add, so R_total = 2 Ω + 2 Ω + 2 Ω = 6 Ω; the answer “6 Ω” is therefore correct. A common mistake is to think the resistors combine like parallel values and divide, which would give 2/3 Ω, but that rule does not apply to series connections.",
     isPlaceholder: false,
   },
   {
@@ -582,6 +636,7 @@ export const nustBank: Question[] = [
     text: "A charged particle moving parallel to a magnetic field experiences a force of:",
     options: ["zero", "maximum", "half the maximum", "infinite"],
     correctIndex: 0,
+    explanation: "The magnetic force is given by **F = q v B sinθ**, where θ is the angle between velocity and field; for motion parallel to the field θ = 0° so sinθ = 0 and the force vanishes. The tempting choice “maximum” would require θ = 90° (sinθ = 1), which is not the case here. Hence the force is zero.",
     isPlaceholder: false,
   },
   {
@@ -592,6 +647,7 @@ export const nustBank: Question[] = [
     text: "The SI unit of magnetic flux density is the:",
     options: ["tesla", "weber", "ampere", "volt"],
     correctIndex: 0,
+    explanation: "Magnetic flux density B is defined as flux Φ divided by area A, B = Φ ÷ A, so its unit is weber per square metre, which is named the tesla; the weber alone measures magnetic flux, not flux density, while ampere and volt are units of current and electric potential respectively.",
     isPlaceholder: false,
   },
   {
@@ -602,6 +658,7 @@ export const nustBank: Question[] = [
     text: "In a purely resistive AC circuit, current and voltage are:",
     options: ["in phase", "90° out of phase", "180° out of phase", "270° out of phase"],
     correctIndex: 0,
+    explanation: "In a pure resistor the impedance is real (Z = R) so the phase angle φ = 0°, meaning voltage and current vary together and are in phase. The 90° out‑of‑phase option applies to purely inductive or capacitive loads, not to a resistive circuit.",
     isPlaceholder: false,
   },
   {
@@ -612,6 +669,7 @@ export const nustBank: Question[] = [
     text: "In a purely capacitive AC circuit, the current:",
     options: ["leads the voltage by 90°", "lags the voltage by 90°", "is in phase with the voltage", "is always zero"],
     correctIndex: 0,
+    explanation: "In a pure capacitor the impedance is Z=−j/(ωC), so the current I=V/Z=V·jωC leads the applied voltage by a phase angle of +90°. The distractor that says the current lags by 90° applies to an inductive circuit, not a capacitive one. The current is not zero because a capacitor allows AC to flow, only the phase relationship changes.",
     isPlaceholder: false,
   },
 
@@ -624,6 +682,7 @@ export const nustBank: Question[] = [
     text: "The speed of light in vacuum is approximately:",
     options: ["3 × 10⁸ m/s", "3 × 10⁶ m/s", "3 × 10¹⁰ m/s", "3 × 10⁴ m/s"],
     correctIndex: 0,
+    explanation: "The speed of light in vacuum is defined as c ≈ 3 × 10⁸ m/s, a value fixed by the definition of the metre. The choice 3 × 10⁶ m/s looks similar but is two orders of magnitude too low, contradicting the measured constant.",
     isPlaceholder: false,
   },
   {
@@ -634,6 +693,7 @@ export const nustBank: Question[] = [
     text: "A convex lens is:",
     options: ["converging", "diverging", "neither converging nor diverging", "flat"],
     correctIndex: 0,
+    explanation: "A convex lens is a converging lens because its surfaces bulge outward, causing parallel incident rays to refract toward the principal axis and meet at a real focal point; the lens formula 1/f = (n‑1)(1/R₁ – 1/R₂) gives a positive focal length for a convex shape. The distractor “diverging” applies to concave lenses, which have inward‑curved surfaces and produce a virtual focal point, so it does not describe a convex lens. The other options describe lenses that are neither converging nor have curvature, which is inconsistent with the definition of a convex lens.",
     isPlaceholder: false,
   },
   {
@@ -644,6 +704,7 @@ export const nustBank: Question[] = [
     text: "Light is:",
     options: ["a transverse wave", "a longitudinal wave", "a sound wave", "a purely mechanical wave"],
     correctIndex: 0,
+    explanation: "Light propagates as an electromagnetic disturbance whose electric and magnetic fields oscillate perpendicular to the direction of travel, so it is a transverse wave. Unlike sound, which is a longitudinal mechanical wave requiring a material medium, light needs no medium and its oscillations are not parallel to propagation, making the longitudinal‑wave choice incorrect. The key idea is that the field vectors are orthogonal to the wave vector, confirming the transverse nature.",
     isPlaceholder: false,
   },
   {
@@ -654,6 +715,7 @@ export const nustBank: Question[] = [
     text: "In Young's double-slit experiment, increasing the light's wavelength:",
     options: ["increases the fringe width", "decreases the fringe width", "leaves the fringe width unchanged", "makes the fringes vanish entirely"],
     correctIndex: 0,
+    explanation: "The fringe spacing in Young’s experiment is β = λ D ⁄ d, so a larger wavelength λ makes β larger and the bright‑dark pattern spread out. The option stating that the fringe width increases is therefore correct, while the choice that it decreases is wrong because β varies directly, not inversely, with λ. The other distractors ignore the λ dependence or confuse wavelength with coherence.",
     isPlaceholder: false,
   },
 
@@ -666,6 +728,7 @@ export const nustBank: Question[] = [
     text: "In the photoelectric effect, increasing the light intensity increases the:",
     options: ["number of emitted electrons", "kinetic energy of each electron", "threshold frequency", "work function"],
     correctIndex: 0,
+    explanation: "Increasing the light intensity means more photons strike the surface per second, and each photon can release at most one electron, so the photocurrent (and thus the number of emitted electrons) rises while the kinetic energy of each electron stays set by E = hf − ϕ. The threshold frequency and the work function are intrinsic properties of the material and do not depend on intensity, so those choices are incorrect.",
     isPlaceholder: false,
   },
   {
@@ -676,6 +739,7 @@ export const nustBank: Question[] = [
     text: "The photoelectric effect demonstrates that light has:",
     options: ["particle nature", "purely wave nature", "magnetic charge", "infinite speed"],
     correctIndex: 0,
+    explanation: "The photoelectric effect shows that electrons are emitted only when individual light quanta have energy E = h ν exceeding the metal’s work function, a clearly particle‑like description of light. A purely wave picture would predict electron emission depending on intensity alone, not on a threshold frequency, so it cannot explain the observed cutoff. Options invoking magnetic charge or infinite speed are unrelated to the energy‑quantum requirement.",
     isPlaceholder: false,
   },
   {
@@ -686,6 +750,7 @@ export const nustBank: Question[] = [
     text: "The Bohr model successfully explains the spectrum of:",
     options: ["hydrogen", "helium", "lithium", "uranium"],
     correctIndex: 0,
+    explanation: "The Bohr model gives the quantized energy levels En = –13.6 eV / n², which correctly predicts the line wavelengths of the hydrogen emission spectrum; for helium, lithium or uranium the electron–electron interactions and relativistic effects are not accounted for, so their spectra are not reproduced. The most tempting distractor, helium, has two electrons and thus cannot be described by the single‑electron Bohr formula.",
     isPlaceholder: false,
   },
   {
@@ -696,6 +761,7 @@ export const nustBank: Question[] = [
     text: "The SI unit of radioactivity is the:",
     options: ["becquerel", "joule", "volt", "tesla"],
     correctIndex: 0,
+    explanation: "The SI unit for radioactivity is the becquerel, defined as one nuclear decay occurring each second (1 Bq = 1 decay s⁻¹). Joule measures energy, volt measures electric potential, and tesla measures magnetic flux density, so they cannot represent radioactive activity.",
     isPlaceholder: false,
   },
 
@@ -708,6 +774,7 @@ export const nustBank: Question[] = [
     text: "Electrons were discovered through:",
     options: ["cathode ray experiments", "alpha particle scattering", "the photoelectric effect", "X-ray diffraction"],
     correctIndex: 0,
+    explanation: "Cathode‑ray experiments revealed the electron when Thomson measured the ray’s deflection in crossed electric (E) and magnetic (B) fields and used the relation e/m = v × B ÷ E to obtain a charge‑to‑mass ratio. Alpha‑particle scattering identified the atomic nucleus, not a light charged particle, so that option is unrelated. The photoelectric effect and X‑ray diffraction involve electrons but they were observed only after the particle had already been discovered.",
     isPlaceholder: false,
   },
   {
@@ -718,6 +785,7 @@ export const nustBank: Question[] = [
     text: "The nucleus of an atom contains:",
     options: ["protons and neutrons", "protons and electrons", "neutrons and electrons", "protons only"],
     correctIndex: 0,
+    explanation: "The nucleus is the central, massive part of an atom and is composed of positively‑charged protons together with neutral neutrons; electrons orbit outside the nucleus in the electron cloud, so a choice that includes electrons is incorrect. The key fact is that the mass of an atom comes from the combined mass of protons and neutrons in the nucleus. The distractor mentioning protons and electrons is tempting because protons are in the nucleus, but electrons never reside there.",
     isPlaceholder: false,
   },
   {
@@ -728,6 +796,7 @@ export const nustBank: Question[] = [
     text: "The atomic number of an element equals its number of:",
     options: ["protons", "neutrons", "nucleons", "electrons"],
     correctIndex: 0,
+    explanation: "The atomic number Z is defined as the number of protons in the nucleus, so Z = (number of protons). Neutrons or nucleons (protons + neutrons) can vary among isotopes, and electrons equal protons only for a neutral atom, not by definition.",
     isPlaceholder: false,
   },
   {
@@ -738,6 +807,7 @@ export const nustBank: Question[] = [
     text: "Sodium chloride is held together by:",
     options: ["ionic bonding", "covalent bonding", "metallic bonding", "hydrogen bonding"],
     correctIndex: 0,
+    explanation: "In NaCl a sodium atom transfers its valence electron to chlorine, giving Na⁺ and Cl⁻ that are held together by the strong electrostatic attraction of opposite charges (ionic bonding). Covalent bonding would require sharing of electrons, which does not occur here, and metallic or hydrogen bonding are irrelevant because there is no delocalised electron sea or H‑atoms involved.",
     isPlaceholder: false,
   },
   {
@@ -748,6 +818,7 @@ export const nustBank: Question[] = [
     text: "A double covalent bond involves the sharing of:",
     options: ["two electron pairs", "one electron pair", "three electron pairs", "oppositely charged ions"],
     correctIndex: 0,
+    explanation: "A double covalent bond is formed when two electron pairs (four electrons) are shared between the two atoms. The option stating one electron pair describes a single covalent bond, which is the most tempting but incorrect choice. The alternatives of three pairs or oppositely charged ions refer to a triple bond and ionic bonding, respectively, and do not apply to a double bond.",
     isPlaceholder: false,
   },
   {
@@ -758,6 +829,7 @@ export const nustBank: Question[] = [
     text: "A reaction that releases heat is called:",
     options: ["exothermic", "endothermic", "isothermal", "adiabatic"],
     correctIndex: 0,
+    explanation: "A reaction that releases heat has a negative enthalpy change (ΔH < 0), which defines it as exothermic. The term endothermic refers to a process that absorbs heat (ΔH > 0), so it is the opposite of the correct description. The other options describe conditions of temperature or heat exchange, not the sign of heat released.",
     isPlaceholder: false,
   },
   {
@@ -768,6 +840,7 @@ export const nustBank: Question[] = [
     text: "The heat content of a system at constant pressure is its:",
     options: ["enthalpy", "entropy", "internal energy", "free energy"],
     correctIndex: 0,
+    explanation: "At constant pressure the heat added to a system equals the change in enthalpy, ΔH = qₚ, so the heat content is the enthalpy. Entropy measures disorder, internal energy is the total energy at any condition, and free energy accounts for usable work, none of which directly represent heat at constant pressure.",
     isPlaceholder: false,
   },
   {
@@ -778,6 +851,7 @@ export const nustBank: Question[] = [
     text: "At equilibrium, the rates of the forward and reverse reactions are:",
     options: ["equal", "both zero", "forward greater", "reverse greater"],
     correctIndex: 0,
+    explanation: "At dynamic equilibrium the forward reaction rate equals the reverse reaction rate, so rate_fwd = rate_rev; this equality defines the steady state where concentrations no longer change. The tempting choice “both zero” is incorrect because individual molecular collisions continue, only the net change in concentration is zero.",
     isPlaceholder: false,
   },
   {
@@ -788,6 +862,7 @@ export const nustBank: Question[] = [
     text: "For N₂ + 3H₂ ⇌ 2NH₃, raising the pressure at equilibrium:",
     options: ["favours the forward reaction", "favours the reverse reaction", "has no effect", "stops the reaction"],
     correctIndex: 0,
+    explanation: "Increasing pressure shifts the equilibrium toward the side with fewer gas moles; the reaction N₂ + 3H₂ ⇌ 2NH₃ goes from 4 mol gas to 2 mol, so the forward direction is favoured. The reverse direction would increase the total number of gas moles, so it is not favored. This follows Le Chatelier’s principle, not a stoppage of the reaction.",
     isPlaceholder: false,
   },
 
@@ -800,6 +875,7 @@ export const nustBank: Question[] = [
     text: "The most electronegative element is:",
     options: ["fluorine", "oxygen", "chlorine", "sodium"],
     correctIndex: 0,
+    explanation: "Fluorine has the highest Pauling electronegativity value (≈4.0), so it is the most electronegative element. The key is to compare electronegativity values on the periodic table; oxygen, while very electronegative (≈3.5), is lower than fluorine, making it the most tempting but incorrect distractor.",
     isPlaceholder: false,
   },
   {
@@ -810,6 +886,7 @@ export const nustBank: Question[] = [
     text: "Atomic radius generally across a period from left to right:",
     options: ["decreases", "increases", "stays the same", "varies randomly"],
     correctIndex: 0,
+    explanation: "Across a period the atomic radius decreases because the number of protons rises while the added electrons enter the same shell, so the effective nuclear charge (Z_eff) increases and pulls the electron cloud inward. The option stating that the radius increases is wrong since a larger nuclear charge does not expand the size but contracts it. Hence the correct statement is that the radius decreases.",
     isPlaceholder: false,
   },
   {
@@ -820,6 +897,7 @@ export const nustBank: Question[] = [
     text: "Carbon belongs to which block of the periodic table?",
     options: ["p-block", "s-block", "d-block", "f-block"],
     correctIndex: 0,
+    explanation: "Carbon is in group 14 and period 2, where the valence electrons fill the 2p subshell, so it lies in the p‑block of the periodic table. The s‑block contains only groups 1 and 2, whose elements have electrons in s orbitals, so carbon cannot belong there.",
     isPlaceholder: false,
   },
   {
@@ -830,6 +908,7 @@ export const nustBank: Question[] = [
     text: "The noble gases occupy which group?",
     options: ["group 18", "group 1", "group 17", "group 2"],
     correctIndex: 0,
+    explanation: "Noble gases have a complete outer electron shell, placing them in the far right column of the periodic table, which is group 18. The most tempting distractor, group 17, contains the halogens that are one electron short of a full valence shell and are highly reactive, unlike the inert noble gases.",
     isPlaceholder: false,
   },
   {
@@ -840,6 +919,7 @@ export const nustBank: Question[] = [
     text: "The central metal ion in a coordination compound is surrounded by:",
     options: ["ligands", "isotopes", "allotropes", "structural isomers"],
     correctIndex: 0,
+    explanation: "The central metal ion is coordinated by surrounding ligands, which donate electron pairs to form coordinate bonds; this defines the coordination sphere. Isotopes refer to nuclei of the same element, allotropes are different structural forms of an element, and structural isomers describe different connectivity in whole molecules, none of which describe the entities directly attached to a metal center.",
     isPlaceholder: false,
   },
   {
@@ -850,6 +930,7 @@ export const nustBank: Question[] = [
     text: "The coordination number of the complex ion [Cu(NH₃)₄]²⁺ is:",
     options: ["4", "6", "2", "1"],
     correctIndex: 0,
+    explanation: "The coordination number equals the number of donor atoms bound to the metal, and the ion contains four NH₃ ligands each donating one pair, giving a coordination number of 4; the common octahedral value of 6 is incorrect because only four ligands are present.",
     isPlaceholder: false,
   },
 
@@ -862,6 +943,7 @@ export const nustBank: Question[] = [
     text: "Methane has which molecular geometry?",
     options: ["tetrahedral", "linear", "planar", "pyramidal"],
     correctIndex: 0,
+    explanation: "Methane (CH₄) has four σ‑bond pairs around carbon, so VSEPR predicts a tetrahedral arrangement with bond angles of about 109.5°. The linear option would require only two regions of electron density, which does not match the four C–H bonds, so it is incorrect.",
     isPlaceholder: false,
   },
   {
@@ -872,6 +954,7 @@ export const nustBank: Question[] = [
     text: "The general formula of alkanes is:",
     options: ["CₙH₂ₙ₊₂", "CₙH₂ₙ", "CₙH₂ₙ₋₂", "CₙHₙ"],
     correctIndex: 0,
+    explanation: "Alkanes are saturated hydrocarbons, each carbon makes four single bonds, giving the general formula CₙH₂ₙ₊₂; the extra two hydrogens account for the terminal CH₃ groups. The formula CₙH₂ₙ describes unsaturated alkenes, so it is not correct for alkanes.",
     isPlaceholder: false,
   },
   {
@@ -882,6 +965,7 @@ export const nustBank: Question[] = [
     text: "Benzene is an example of an:",
     options: ["aromatic hydrocarbon", "alkane", "alkyne", "alcohol"],
     correctIndex: 0,
+    explanation: "Benzene has a planar six‑membered ring with alternating double bonds and six π electrons, which satisfy the 4n+2 rule (n = 1) for aromaticity. Hence it is classified as an aromatic hydrocarbon. It is not an alkane because alkanes are saturated molecules containing only σ bonds and no delocalized π system.",
     isPlaceholder: false,
   },
   {
@@ -892,6 +976,7 @@ export const nustBank: Question[] = [
     text: "The functional group of an alcohol is:",
     options: ["−OH", "−CHO", "−COOH", "−O−"],
     correctIndex: 0,
+    explanation: "The functional group that defines an alcohol is the hydroxyl group −OH, which is bonded to a carbon atom. The aldehyde group −CHO contains a carbonyl (C=O) and a hydrogen, the carboxyl group −COOH has two oxygens and a carbonyl, and the ether linkage −O− lacks the attached hydrogen, so they are not alcohols.",
     isPlaceholder: false,
   },
   {
@@ -902,6 +987,7 @@ export const nustBank: Question[] = [
     text: "Heating ethanol with concentrated H₂SO₄ gives mainly:",
     options: ["ethene", "ethane", "methanol", "water only"],
     correctIndex: 0,
+    explanation: "Concentrated H₂SO₄ protonates ethanol, the –OH leaves as water and a β‑hydrogen is eliminated to give the alkene ethene (C₂H₄). The reaction is a dehydration, not a reduction, so ethane cannot form, and the starting ethanol cannot be converted to methanol or merely water.",
     isPlaceholder: false,
   },
   {
@@ -912,6 +998,7 @@ export const nustBank: Question[] = [
     text: "The functional group present in ethers is:",
     options: ["−O−", "−OH", "−CHO", "−COOH"],
     correctIndex: 0,
+    explanation: "Ethers contain the –O– linkage, an oxygen atom singly bonded to two carbon atoms; this distinguishes them from alcohols that have the –OH group. The –O– group is the defining functional group of an ether, whereas –OH indicates a hydroxyl group of an alcohol, and –CHO and –COOH belong to aldehydes and carboxylic acids respectively.",
     isPlaceholder: false,
   },
   {
@@ -922,6 +1009,7 @@ export const nustBank: Question[] = [
     text: "The functional group of a ketone is:",
     options: ["−CO−", "−CHO", "−COOH", "−OH"],
     correctIndex: 0,
+    explanation: "The functional group of a ketone is the carbonyl carbon attached to two other carbons, written as –CO–; this distinguishes it from –CHO, which has a hydrogen on the carbonyl and defines an aldehyde, and from –COOH, which adds an –OH to the carbonyl making a carboxylic acid, while –OH alone is simply an alcohol.",
     isPlaceholder: false,
   },
   {
@@ -932,6 +1020,7 @@ export const nustBank: Question[] = [
     text: "Acetone is a:",
     options: ["ketone", "aldehyde", "carboxylic acid", "primary alcohol"],
     correctIndex: 0,
+    explanation: "Acetone contains a carbonyl group (C=O) bonded to two alkyl groups, which classifies it as a ketone. An aldehyde would have the carbonyl at the end of the chain (R‑CHO), which acetone lacks, and it is neither a carboxylic acid nor a primary alcohol because those contain –COOH or –CH₂OH groups respectively.",
     isPlaceholder: false,
   },
   {
@@ -942,6 +1031,7 @@ export const nustBank: Question[] = [
     text: "Formaldehyde contains the functional group:",
     options: ["−CHO", "−CO−", "−COOH", "−OH"],
     correctIndex: 0,
+    explanation: "Formaldehyde contains the aldehyde group −CHO, characterized by a carbonyl C=O attached to a hydrogen atom (H–C=O). The ketone group −CO− is a tempting distractor, but it has two carbon substituents on the carbonyl carbon rather than the required hydrogen, and the other groups −COOH and −OH correspond to carboxylic acid and alcohol functionalities respectively.",
     isPlaceholder: false,
   },
 
@@ -954,6 +1044,7 @@ export const nustBank: Question[] = [
     text: "Choose the correct sentence.",
     options: ["She goes to school daily.", "She go to school daily.", "She going to school daily.", "She gone to school daily."],
     correctIndex: 0,
+    explanation: "The sentence “She goes to school daily” is correct because a third‑person singular subject requires the verb to take the –s ending (go → goes). The tempting alternative “She go to school daily” omits this agreement, making the verb form incorrect.",
     isPlaceholder: false,
   },
   {
@@ -964,6 +1055,7 @@ export const nustBank: Question[] = [
     text: "He ___ to the library yesterday.",
     options: ["went", "go", "gone", "going"],
     correctIndex: 0,
+    explanation: "The past‑tense verb “went” correctly matches the simple past time marker “yesterday”. “Go” is present tense, “gone” is a past participle that needs an auxiliary, and “going” is a present participle, so they cannot complete the sentence. The key step is to choose the simple past form of the verb “to go”.",
     isPlaceholder: false,
   },
   {
@@ -974,6 +1066,7 @@ export const nustBank: Question[] = [
     text: "They ___ football every weekend.",
     options: ["play", "plays", "played", "playing"],
     correctIndex: 0,
+    explanation: "Because the subject “they” is plural, the present‑tense verb must be the base form, so the sentence is “They play football every weekend.” The form “plays” is singular‑third‑person and does not agree with “they,” while “played” is past tense and “playing” is a gerund, both inappropriate for the simple present.",
     isPlaceholder: false,
   },
   {
@@ -984,6 +1077,7 @@ export const nustBank: Question[] = [
     text: "Choose the grammatically correct sentence.",
     options: ["The dog chased the cat.", "The cat chased the dog the.", "Chased the dog the cat.", "The dog the cat chased."],
     correctIndex: 0,
+    explanation: "The sentence “The dog chased the cat.” is correct because English declarative clauses require the subject‑verb‑object order (S→V→O). The other alternatives either add an extra article, lack a clear subject, or invert the order, violating the S→V→O pattern.",
     isPlaceholder: false,
   },
   {
@@ -994,6 +1088,7 @@ export const nustBank: Question[] = [
     text: "The book ___ on the table.",
     options: ["is", "are", "be", "am"],
     correctIndex: 0,
+    explanation: "The singular noun “book” requires a singular verb, so the correct form is “is”. The plural verb “are” does not agree with a singular subject, and “be” and “am” are infinitive or first‑person forms that cannot complete the sentence. Hence “is” is the only grammatically correct choice.",
     isPlaceholder: false,
   },
   {
@@ -1004,6 +1099,7 @@ export const nustBank: Question[] = [
     text: "Choose the passive form of “The cat eats the fish.”",
     options: ["The fish is eaten by the cat.", "The cat is eaten by the fish.", "The fish eats the cat.", "The cat was eaten by the fish."],
     correctIndex: 0,
+    explanation: "To form the passive, move the object “the fish” to the subject position and use the verb “to be” in the present simple plus the past participle “eaten”, giving “The fish is eaten by the cat”. The option “The cat is eaten by the fish” is wrong because it reverses the agent and patient, making the fish the eater instead of the one being eaten. This follows the rule: active (subject → verb → object) → passive (object → be + past‑participle → by subject).",
     isPlaceholder: false,
   },
   {
@@ -1014,6 +1110,7 @@ export const nustBank: Question[] = [
     text: "“She writes a letter” in the passive voice is:",
     options: ["A letter is written by her.", "A letter writes her.", "She is written by a letter.", "A letter was written by her."],
     correctIndex: 0,
+    explanation: "To form the passive, the object “a letter” becomes the subject, the verb changes to the appropriate form of be plus the past participle, and the original subject follows after by, giving “A letter is written by her.” The key step is subject → object conversion with be + written. The choice “A letter writes her” is wrong because the verb is active and the roles of subject and object are reversed.",
     isPlaceholder: false,
   },
 
@@ -1026,6 +1123,7 @@ export const nustBank: Question[] = [
     text: "Choose the synonym of RAPID.",
     options: ["Fast", "Slow", "Quiet", "Heavy"],
     correctIndex: 0,
+    explanation: "The word RAPID means having a high speed, i.e., distance ÷ time is large, so the synonym is “Fast”. The most tempting distractor “Slow” denotes a small speed (distance ÷ time is low) and is the opposite meaning. The other options “Quiet” and “Heavy” are unrelated to speed.",
     isPlaceholder: false,
   },
   {
@@ -1036,6 +1134,7 @@ export const nustBank: Question[] = [
     text: "Choose the synonym of HAPPY.",
     options: ["Joyful", "Sad", "Angry", "Tired"],
     correctIndex: 0,
+    explanation: "The word “happy” means feeling joy, so the synonym is joyful. Recognizing that “joyful” shares the same positive emotion while the other options denote opposite or unrelated states (sad is the opposite, angry and tired are different feelings) shows why they are incorrect. Thus happy ↔ joyful.",
     isPlaceholder: false,
   },
   {
@@ -1046,6 +1145,7 @@ export const nustBank: Question[] = [
     text: "Choose the antonym of HOT.",
     options: ["Cold", "Warm", "Burning", "Boiling"],
     correctIndex: 0,
+    explanation: "The opposite of hot is cold, so the correct answer is “Cold.” Recognizing that an antonym is a word with opposite meaning leads directly to this choice, while “Warm” is only a milder degree of heat and not the true opposite.",
     isPlaceholder: false,
   },
   {
@@ -1056,6 +1156,7 @@ export const nustBank: Question[] = [
     text: "Choose the antonym of RICH.",
     options: ["Poor", "Wealthy", "Full", "Happy"],
     correctIndex: 0,
+    explanation: "The opposite meaning (antonym) of “rich” is “poor”, since the two words express mutually exclusive levels of wealth. A common trap is to pick “wealthy”, but that is a synonym of “rich”, not its opposite; the other options do not relate to wealth at all. Thus the correct answer is poor.",
     isPlaceholder: false,
   },
   {
@@ -1066,6 +1167,7 @@ export const nustBank: Question[] = [
     text: "To “bite the dust” means to:",
     options: ["fail or be defeated", "celebrate loudly", "hurry up", "eat quickly"],
     correctIndex: 0,
+    explanation: "The idiom “bite the dust” means to fail or be defeated, as in a person or thing that collapses and “hits the ground.” The phrase does not imply any kind of celebration, so “celebrate loudly” is unrelated, and the other options about hurrying or eating quickly have no connection to the metaphor of falling to the ground. In other words, bite the dust → defeat, not a festive or speedy action.",
     isPlaceholder: false,
   },
   {
@@ -1076,6 +1178,7 @@ export const nustBank: Question[] = [
     text: "“A blessing in disguise” is:",
     options: ["a hidden benefit", "an obvious curse", "a religious gift", "a costly mistake"],
     correctIndex: 0,
+    explanation: "The phrase “a blessing in disguise” means a hidden benefit that is not obvious at first. Recognizing that “blessing” implies something good and “disguise” implies it is concealed leads directly to that meaning, while the option suggesting an obvious curse is opposite in sense and therefore incorrect.",
     isPlaceholder: false,
   },
 
@@ -1088,6 +1191,7 @@ export const nustBank: Question[] = [
     text: "Read: “The sky darkened and rain began to fall.” What is happening?",
     options: ["It is starting to rain.", "The sun is shining.", "Snow is falling.", "The storm has ended."],
     correctIndex: 0,
+    explanation: "The phrase “the sky darkened and rain began to fall” directly describes the onset of precipitation, so the situation is that it is starting to rain. The key step is linking “rain began” with the verb “started,” which rules out any interpretation of sunshine, snow, or the end of a storm. The most tempting distractor about snow is wrong because snow is not mentioned and the context of darkening sky fits rain, not snowfall.",
     isPlaceholder: false,
   },
   {
@@ -1098,6 +1202,7 @@ export const nustBank: Question[] = [
     text: "Read: “She packed her bags and checked the train schedule.” What is she likely doing?",
     options: ["Traveling", "Cooking", "Reading", "Sleeping"],
     correctIndex: 0,
+    explanation: "Packing bags and checking a train schedule are preparatory steps for a journey, so she is traveling. Cooking is unrelated because it does not involve luggage or a timetable, whereas travel implies moving from point A → B.",
     isPlaceholder: false,
   },
   {
@@ -1108,6 +1213,7 @@ export const nustBank: Question[] = [
     text: "Read: “The plant wilted and its leaves turned brown.” What likely happened?",
     options: ["It lacked water.", "It was struck by lightning.", "It was singing.", "It was painted."],
     correctIndex: 0,
+    explanation: "The wilting and brown leaves indicate loss of turgor pressure caused by insufficient water uptake (↓ water → turgor loss). Therefore the plant most likely lacked water. A strike of lightning would cause scorching or death, not the gradual drying symptoms described, so that distractor is inconsistent.",
     isPlaceholder: false,
   },
   {
@@ -1118,6 +1224,7 @@ export const nustBank: Question[] = [
     text: "“He arrived drenched.” What can be inferred?",
     options: ["It was raining.", "He was swimming.", "He spilled water.", "He was crying."],
     correctIndex: 0,
+    explanation: "Since “drenched” means completely soaked by water from outside, the natural inference is that it was raining when he arrived; the key step is linking the adjective “drenched” to an external source of water (rain). The tempting distractor that he was swimming is less plausible because swimming would make him wet before arrival, not upon arrival, and the sentence does not mention any swimming activity. Hence the only logical conclusion is that rain was falling.",
     isPlaceholder: false,
   },
   {
@@ -1128,6 +1235,7 @@ export const nustBank: Question[] = [
     text: "“The crowd cheered as the team entered the stadium.” What is implied?",
     options: ["The team is popular.", "The stadium is empty.", "The team lost.", "The crowd is angry."],
     correctIndex: 0,
+    explanation: "The verb “cheered” shows a positive reaction, so the natural inference is that the team is popular with the spectators. The distractor “the crowd is angry” is wrong because cheering is an expression of approval, not hostility.",
     isPlaceholder: false,
   },
 
@@ -1140,6 +1248,7 @@ export const nustBank: Question[] = [
     text: "Next in the series 3, 6, 12, 24, … ?",
     options: ["48", "36", "30", "42"],
     correctIndex: 0,
+    explanation: "Each term is obtained by multiplying the previous term by 2, so 24 × 2 = 48. Hence the next number in the series is 48. The choice 36 would follow an addition pattern (e.g., adding 12), which does not match the consistent doubling rule.",
     isPlaceholder: false,
   },
   {
@@ -1150,6 +1259,7 @@ export const nustBank: Question[] = [
     text: "Next in the series 2, 4, 8, 16, … ?",
     options: ["32", "24", "30", "20"],
     correctIndex: 0,
+    explanation: "Each term is obtained by multiplying the previous term by 2 (aₙ₊₁ = 2 × aₙ), so after 16 the next term is 2 × 16 = 32. The choice 24 is a multiple of 8 but does not follow the doubling pattern, therefore the correct answer is 32.",
     isPlaceholder: false,
   },
   {
@@ -1160,6 +1270,7 @@ export const nustBank: Question[] = [
     text: "Next in the series 1, 4, 9, 16, … ?",
     options: ["25", "20", "24", "30"],
     correctIndex: 0,
+    explanation: "Each term is the square of successive integers: 1², 2², 3², 4², so the next term is 5² = 25. The distractor 20 is not a perfect square and does not follow the pattern. Hence the correct next number is 25.",
     isPlaceholder: false,
   },
   {
@@ -1170,6 +1281,7 @@ export const nustBank: Question[] = [
     text: "Book is to Reading as Pen is to:",
     options: ["Writing", "Eating", "Sleeping", "Running"],
     correctIndex: 0,
+    explanation: "The pair shows a tool and its primary function: a book is used for reading, so a pen is used for writing. Recognizing the same relationship leads directly to the answer “writing.” The other options such as “eating” do not match the functional pairing and are therefore incorrect.",
     isPlaceholder: false,
   },
   {
@@ -1180,6 +1292,7 @@ export const nustBank: Question[] = [
     text: "Doctor is to Hospital as Teacher is to:",
     options: ["School", "Office", "Factory", "Farm"],
     correctIndex: 0,
+    explanation: "The analogy pairs a professional with the place where they normally work, so a doctor belongs to a hospital and a teacher belongs to a school. The key step is recognizing the standard work setting for each occupation; the most tempting distractor, office, is where many clerical jobs are done but not where teachers conduct classes. Hence the correct completion is school.",
     isPlaceholder: false,
   },
   {
@@ -1190,6 +1303,7 @@ export const nustBank: Question[] = [
     text: "Ice is to Cold as Fire is to:",
     options: ["Hot", "Bright", "Fuel", "Smoke"],
     correctIndex: 0,
+    explanation: "Ice : cold :: fire : hot, so the pair shows opposite temperature relationships; the key step is matching each element with its temperature counterpart. “Bright” describes fire’s light but does not give the opposite temperature, while “fuel” and “smoke” are causes or results, not the temperature opposite. Hence the correct answer is hot.",
     isPlaceholder: false,
   },
   {
@@ -1200,6 +1314,7 @@ export const nustBank: Question[] = [
     text: "If CAT is coded as 24 (A = 1, B = 2, …), then DOG is coded as:",
     options: ["26", "24", "30", "20"],
     correctIndex: 0,
+    explanation: "Each word is coded by summing the alphabetical positions of its letters (C + A + T = 3 + 1 + 20 = 24), so for DOG we have D + O + G = 4 + 15 + 7 = 26. Hence the correct code is 26, and the tempting choice 24 is just the sum for CAT, not for the new letters.",
     isPlaceholder: false,
   },
   {
@@ -1210,6 +1325,7 @@ export const nustBank: Question[] = [
     text: "If APPLE is coded as 50 (A = 1, B = 2, …), then ORANGE is coded as:",
     options: ["60", "55", "50", "65"],
     correctIndex: 0,
+    explanation: "Add the alphabetical values of the letters (A=1, B=2, …) and total them; APPLE gives 1+16+16+12+5 = 50, so ORANGE is 15+18+1+14+7+5 = 60. The choice 55 is tempting but the correct sum is 60, not 55.",
     isPlaceholder: false,
   },
 
@@ -1222,6 +1338,7 @@ export const nustBank: Question[] = [
     text: "A square rotated 90 degrees still looks like:",
     options: ["a square", "a triangle", "a circle", "a line"],
     correctIndex: 0,
+    explanation: "A rotation of 90° is a rigid motion that preserves all side lengths and right angles, so the figure after the turn still has four equal sides and four right angles, i.e., it remains a square. The triangle option is incorrect because a triangle has only three sides and cannot be obtained by a distance‑preserving rotation of a four‑sided figure.",
     isPlaceholder: false,
   },
   {
@@ -1232,6 +1349,7 @@ export const nustBank: Question[] = [
     text: "The next shape in the sequence ○, △, □, ○, △, … is:",
     options: ["□", "○", "△", "☆"],
     correctIndex: 0,
+    explanation: "The symbols repeat in a cycle of three: ○ → △ → □ → ○ → △ → …, so the term after the second triangle must be the square (□). The most tempting distractor, the circle (○), is wrong because the cycle does not return to ○ until three positions later, not immediately after the triangle.",
     isPlaceholder: false,
   },
   {
@@ -1242,6 +1360,7 @@ export const nustBank: Question[] = [
     text: "The image of the letter A in a vertical mirror looks most like:",
     options: ["A (nearly unchanged)", "a reversed E", "a backward K", "a mirrored M"],
     correctIndex: 0,
+    explanation: "A capital A has a vertical line of symmetry, so a vertical mirror reflects each side onto the other and the image remains essentially the same; thus the correct description is “A (nearly unchanged)”. The distractor “a reversed E” is wrong because an E lacks vertical symmetry and would not result from mirroring an A.",
     isPlaceholder: false,
   },
   {
@@ -1252,6 +1371,7 @@ export const nustBank: Question[] = [
     text: "A person facing north looks into a vertical mirror mounted on the north wall. The image appears to face:",
     options: ["south", "north", "east", "west"],
     correctIndex: 0,
+    explanation: "Since a plane mirror reverses the direction perpendicular to its surface, a person looking north sees his front turned into the opposite direction, so the image appears to face south; the choice “south” is correct. The tempting answer “north” ignores that a mirror does not preserve the forward‑backward orientation but flips it.",
     isPlaceholder: false,
   },
 ];

@@ -55,6 +55,13 @@ describe("nust bank — structure", () => {
     }
   });
 
+  it("every question has a non-empty explanation", () => {
+    for (const q of nustBank) {
+      assert.ok(typeof q.explanation === "string", `${q.id}: explanation missing`);
+      assert.ok(q.explanation.trim().length > 0, `${q.id}: empty explanation`);
+    }
+  });
+
   it("has unique IDs and no duplicate stems", () => {
     const ids = new Set(nustBank.map((q) => q.id));
     assert.equal(ids.size, 120);

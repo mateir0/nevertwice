@@ -13,6 +13,21 @@ import { nustConfig } from "@/config/exams/nust";
 
 const TOTAL_SECONDS = nustConfig.secondsPerQuestion;
 
+/** Post-answer debrief panel: the correct letter + why the answer is right. */
+function Debrief({ question }: { question: Question }) {
+  const letter = String.fromCharCode(65 + question.correctIndex);
+  return (
+    <section className="debrief-in mt-4 border-t border-bronze pt-4" aria-label="Answer debrief">
+      <p className="font-display text-lg tracking-wide text-amber">
+        DEBRIEF — WHY {letter} IS RIGHT
+      </p>
+      <p className="mt-2 font-type text-[16px] leading-relaxed text-parchment">
+        {displayMath(question.explanation)}
+      </p>
+    </section>
+  );
+}
+
 export default function SessionPage() {
   const router = useRouter();
   const [questions, setQuestions] = useState<Question[] | null>(null);
@@ -23,6 +38,9 @@ export default function SessionPage() {
   const [secondsLeft, setSecondsLeft] = useState(TOTAL_SECONDS);
   const [startTime] = useState(() => Date.now());
   const [finishing, setFinishing] = useState(false);
+  // True during the 700ms beat after a wrong answer is classified. While
+  // beating, auto-advance owns the transition — no NEXT/FINISH is rendered.
+  const [advancing, setAdvancing] = useState(false);
 
   useEffect(() => {
     const active = loadActiveDrill();
@@ -35,6 +53,7 @@ export default function SessionPage() {
 
   useEffect(() => {
     setSecondsLeft(TOTAL_SECONDS);
+    setAdvancing(false);
   }, [index]);
 
   function finishWith(answerArr: (number | null)[], errorArr: (ErrorType | null)[]): void {
@@ -143,12 +162,26 @@ export default function SessionPage() {
     });
   }
 
+  /**
+   * One-tap classification: commit the error kind, hold a 700ms beat so the
+   * tapped chip reads as selected (all chips disabled, no double-tap), then
+   * auto-advance — or auto-finish on the last question. No second tap, ever.
+   * The timer is already frozen after answering, so there is no race.
+   */
   function classify(kind: ErrorType): void {
-    setErrorKinds((prev) => {
-      const next = [...prev];
-      next[index] = kind;
-      return next;
-    });
+    if (!questions || advancing || errorKinds[index] !== null) return;
+    const nextErrors = [...errorKinds];
+    nextErrors[index] = kind;
+    setErrorKinds(nextErrors);
+    setAdvancing(true);
+    const target = index;
+    window.setTimeout(() => {
+      if (target >= questions.length - 1) {
+        finishWith(answers, nextErrors);
+      } else {
+        setIndex((i) => Math.min(i + 1, questions.length - 1));
+      }
+    }, 700);
   }
 
   return (
@@ -172,7 +205,7 @@ export default function SessionPage() {
       </div>
 
       <main>
-        <article aria-label={`Question ${index + 1} of ${total}`} className="card">
+        <article key={question.id} aria-label={`Question ${index + 1} of ${total}`} className="card card-in">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-display text-xl tracking-wide text-blood">{question.section}</span>
@@ -200,8 +233,9 @@ export default function SessionPage() {
                   aria-checked={picked}
                   disabled={isAnswered}
                   onClick={() => choose(i)}
-                  className="bronze-frame flex items-center gap-4 bg-night p-5 text-left transition-all duration-200 disabled:cursor-default enabled:hover:translate-x-1 enabled:hover:border-amber enabled:hover:shadow-[0_0_18px_rgba(166,124,61,0.3)]"
+                  className={`bronze-frame flex items-center gap-4 bg-night p-5 text-left transition-all duration-200 disabled:cursor-default enabled:hover:translate-x-1 enabled:hover:border-amber enabled:hover:shadow-[0_0_18px_rgba(166,124,61,0.3)] ${wrongPick ? "shake-x" : "stagger-fade"}`}
                   style={{
+                    animationDelay: wrongPick ? "0ms" : `${i * 40}ms`,
                     borderLeft: revealed
                       ? "4px solid #6B7F4E"
                       : wrongPick
@@ -219,12 +253,14 @@ export default function SessionPage() {
                     {letter}
                   </span>
                   <span className="flex-1 font-type text-[17px] text-parchment">{displayMath(opt)}</span>
-                  {revealed && <span className="rounded bg-olive px-1.5 font-type text-night">✓</span>}
-                  {wrongPick && <span className="rounded bg-blood px-1.5 font-type text-parchment">✗</span>}
+                  {revealed && <span className="pop-in rounded bg-olive px-1.5 font-type text-night">✓</span>}
+                  {wrongPick && <span className="pop-in rounded bg-blood px-1.5 font-type text-parchment">✗</span>}
                 </button>
               );
             })}
           </div>
+
+          {isWrong && <Debrief question={question} />}
 
           {isTimedOut && (
             <p className="mt-5 border-t border-bronze pt-4 font-type text-sm font-bold tracking-wide text-blood" role="alert">
@@ -232,23 +268,27 @@ export default function SessionPage() {
             </p>
           )}
 
+          {isTimedOut && <Debrief question={question} />}
+
           {isWrong && (
             <div className="mt-5 border-t border-bronze pt-4" role="group" aria-label="Classify the error">
               <p className="font-display text-xl tracking-wide text-parchment">
                 <span className="rounded bg-blood px-2 py-0.5 font-type text-sm font-bold text-parchment">WRONG</span> — WHAT HAPPENED?
               </p>
               <p className="mb-3 font-type text-xs text-faded">
-                TAP ONE. REQUIRED BEFORE ADVANCING.
+                TAP ONE — ADVANCES AUTOMATICALLY.
               </p>
               <div className="grid grid-cols-1 gap-2">
-                {ERROR_TYPES.map((t) => {
+                {ERROR_TYPES.map((t, ti) => {
                   const active = classified === t.value;
                   return (
                     <button
                       key={t.value}
                       onClick={() => classify(t.value)}
                       aria-pressed={active}
-                      className={`chip text-left${active ? " chip-active" : ""}`}
+                      disabled={classified !== null}
+                      className={`chip stagger-fade text-left${active ? " chip-active" : ""}`}
+                      style={{ animationDelay: `${ti * 40}ms` }}
                     >
                       <span
                         className={`block font-type text-[15px] font-bold uppercase tracking-[0.12em] ${active ? "text-amber" : "text-parchment"}`}
@@ -266,32 +306,36 @@ export default function SessionPage() {
           )}
 
           {isCorrect && (
-            <p className="font-display mt-5 border-t border-bronze pt-4 text-xl tracking-wide text-parchment">
-              <span className="rounded bg-olive px-2 py-0.5 font-type text-sm font-bold text-night">CORRECT</span> — LOCKED IN.
-            </p>
+            <>
+              <p className="font-display mt-5 border-t border-bronze pt-4 text-xl tracking-wide text-parchment">
+                <span className="rounded bg-olive px-2 py-0.5 font-type text-sm font-bold text-night">CORRECT</span> — LOCKED IN.
+              </p>
+              <Debrief question={question} />
+            </>
           )}
 
           <div className="mt-5 flex items-center justify-between gap-3">
             <Link href="/app" className="font-type text-xs tracking-widest text-faded underline">
               QUIT
             </Link>
-            {!isLast ? (
-              <button
-                disabled={!canAdvance}
-                onClick={() => setIndex((i) => Math.min(i + 1, total - 1))}
-                className="btn-primary disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                NEXT
-              </button>
-            ) : (
-              <button
-                disabled={!canAdvance || finishing}
-                onClick={finish}
-                className="btn-primary disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                {finishing ? "SAVING…" : "FINISH"}
-              </button>
-            )}
+            {!advancing &&
+              (!isLast ? (
+                <button
+                  disabled={!canAdvance}
+                  onClick={() => setIndex((i) => Math.min(i + 1, total - 1))}
+                  className="btn-primary disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  NEXT
+                </button>
+              ) : (
+                <button
+                  disabled={!canAdvance || finishing}
+                  onClick={finish}
+                  className="btn-primary disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  {finishing ? "SAVING…" : "FINISH"}
+                </button>
+              ))}
           </div>
           {isAnswered && !canAdvance && (
             <p className="mt-2 text-right font-type text-[11px] font-bold text-blood">
