@@ -7,6 +7,9 @@ import { Crosshair, Timer, Zap } from "lucide-react";
 import { Wordmark } from "@/components/Wordmark";
 import { WeaknessHeatmap } from "@/components/WeaknessHeatmap";
 import { RecentSessions } from "@/components/RecentSessions";
+import { BankCoverage } from "@/components/BankCoverage";
+import { DossierCustody } from "@/components/DossierCustody";
+import { OfflineBadge } from "@/components/OfflineBadge";
 import { useSessions, useWeaknessNodes } from "@/hooks/useExam";
 import { planDrill, planToGenTargets, saveActiveDrill, type DrillPlan } from "@/engine/drill-planner";
 import { buildDrillQuestions } from "@/engine/question-generator";
@@ -61,8 +64,11 @@ export default function AppDashboard() {
         <Link href="/" className="font-display text-xl tracking-wide text-blood">
           ← NEVERTWICE
         </Link>
-        <span className="label">
-          APP // SESSION CONSOLE
+        <span className="flex items-center gap-2">
+          <OfflineBadge />
+          <span className="label">
+            APP // SESSION CONSOLE
+          </span>
         </span>
       </header>
 
@@ -144,6 +150,8 @@ export default function AppDashboard() {
               ))}
             </div>
           </section>
+          <BankCoverage />
+          <DossierCustody />
         </div>
       </main>
 

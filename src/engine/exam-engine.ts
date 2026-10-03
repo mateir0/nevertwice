@@ -234,4 +234,150 @@ export class ExamEngine {
     localStorage.removeItem(SESSIONS_KEY);
     localStorage.removeItem(LAST_DETAIL_KEY);
   }
+
+  // ---------- dossier custody (export / import, no backend) ----------
+
+  /** The three persistent dossier keys. The transient active-drill key is never exported. */
+  static dossierKeys(): { weakness: string; sessions: string; lastDetail: string } {
+    return { weakness: WEAKNESS_KEY, sessions: SESSIONS_KEY, lastDetail: LAST_DETAIL_KEY };
+  }
+}
+
+/** Serializable dossier snapshot: the three persistent keys, nothing transient. */
+export interface DossierExport {
+  version: 1;
+  exportedAt: number;
+  weakness: WeaknessNode[];
+  sessions: Session[];
+  lastDetail: SessionDetailAnswer[];
+}
+
+/** Read the live dossier from storage as an exportable snapshot. */
+export function exportDossierSnapshot(): DossierExport {
+  return {
+    version: 1,
+    exportedAt: Date.now(),
+    weakness: ExamEngine.getWeaknessNodes(),
+    sessions: ExamEngine.getSessions(),
+    lastDetail: ExamEngine.loadLastDetail(),
+  };
+}
+
+const VALID_TRENDS = new Set(["rising", "falling", "stable"]);
+const VALID_ERRORS: Set<string> = new Set([
+  "concept-gap",
+  "misread",
+  "time-pressure",
+  "silly-mistake",
+  "formula-error",
+]);
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+/**
+ * Validate a parsed JSON value as a dossier snapshot. Accepts the exact
+ * shape exportDossierSnapshot() writes; rejects anything else with an
+ * honest one-line reason. Extra fields are ignored, optional fields
+ * (attemptedKeys) may be absent.
+ */
+export function validateDossierImport(
+  parsed: unknown,
+): { ok: true; data: DossierExport } | { ok: false; error: string } {
+  if (!isRecord(parsed)) return { ok: false, error: "Not a dossier file: expected a JSON object." };
+  const { weakness, sessions, lastDetail } = parsed;
+  if (!Array.isArray(weakness) || !Array.isArray(sessions) || !Array.isArray(lastDetail)) {
+    return {
+      ok: false,
+      error: "Not a dossier file: expected weakness, sessions and lastDetail arrays.",
+    };
+  }
+  for (let i = 0; i < weakness.length; i++) {
+    const n = weakness[i] as Record<string, unknown>;
+    if (
+      !isRecord(n) ||
+      typeof n.topic !== "string" ||
+      typeof n.subtopic !== "string" ||
+      typeof n.mistakeCount !== "number" ||
+      Number.isNaN(n.mistakeCount) ||
+      (n.mistakeCount as number) < 0 ||
+      typeof n.lastSeen !== "number" ||
+      typeof n.trend !== "string" ||
+      !VALID_TRENDS.has(n.trend as string)
+    ) {
+      return { ok: false, error: `Not a dossier file: weakness[${i}] is malformed.` };
+    }
+  }
+  for (let i = 0; i < sessions.length; i++) {
+    const s = sessions[i] as Record<string, unknown>;
+    if (
+      !isRecord(s) ||
+      typeof s.id !== "string" ||
+      typeof s.date !== "number" ||
+      typeof s.questionsAttempted !== "number" ||
+      typeof s.correct !== "number" ||
+      !Array.isArray(s.mistakes) ||
+      typeof s.durationSeconds !== "number"
+    ) {
+      return { ok: false, error: `Not a dossier file: sessions[${i}] is malformed.` };
+    }
+    for (let j = 0; j < (s.mistakes as unknown[]).length; j++) {
+      const m = (s.mistakes as unknown[])[j] as Record<string, unknown>;
+      if (
+        !isRecord(m) ||
+        typeof m.id !== "string" ||
+        typeof m.questionId !== "string" ||
+        typeof m.topic !== "string" ||
+        typeof m.subtopic !== "string" ||
+        typeof m.errorType !== "string" ||
+        !VALID_ERRORS.has(m.errorType as string) ||
+        typeof m.timestamp !== "number" ||
+        typeof m.sessionId !== "string"
+      ) {
+        return { ok: false, error: `Not a dossier file: sessions[${i}].mistakes[${j}] is malformed.` };
+      }
+    }
+  }
+  for (let i = 0; i < lastDetail.length; i++) {
+    const d = lastDetail[i] as Record<string, unknown>;
+    if (
+      !isRecord(d) ||
+      typeof d.questionId !== "string" ||
+      typeof d.section !== "string" ||
+      typeof d.topic !== "string" ||
+      typeof d.subtopic !== "string" ||
+      (d.selected !== null && typeof d.selected !== "number") ||
+      typeof d.correctIndex !== "number" ||
+      !Number.isInteger(d.correctIndex as number) ||
+      typeof d.isCorrect !== "boolean"
+    ) {
+      return { ok: false, error: `Not a dossier file: lastDetail[${i}] is malformed.` };
+    }
+  }
+  return {
+    ok: true,
+    data: {
+      version: 1,
+      exportedAt:
+        typeof (parsed as Record<string, unknown>).exportedAt === "number"
+          ? ((parsed as Record<string, unknown>).exportedAt as number)
+          : Date.now(),
+      weakness: weakness as WeaknessNode[],
+      sessions: sessions as Session[],
+      lastDetail: lastDetail as SessionDetailAnswer[],
+    },
+  };
+}
+
+/** Replace the three persistent dossier keys with validated import data. */
+export function importDossierSnapshot(data: DossierExport): void {
+  if (!isBrowser()) return;
+  try {
+    localStorage.setItem(WEAKNESS_KEY, JSON.stringify(data.weakness));
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify(data.sessions));
+    localStorage.setItem(LAST_DETAIL_KEY, JSON.stringify(data.lastDetail));
+  } catch {
+    // storage full / private mode — the board keeps its current state
+  }
 }

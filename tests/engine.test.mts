@@ -43,9 +43,19 @@ import { planDrill, planToGenTargets } from "../src/engine/drill-planner.ts";
 import {
   ExamEngine,
   TIMEOUT_ANSWER,
+  exportDossierSnapshot,
+  importDossierSnapshot,
   mistakesFromAnswers,
   nodeKey,
+  validateDossierImport,
 } from "../src/engine/exam-engine.ts";
+import {
+  EXPOSURE_KEY,
+  getCoverageCount,
+  getExposure,
+  recordExposureIds,
+  timesSeen,
+} from "../src/engine/exposure.ts";
 import {
   getQuestionsForSession,
   getRecentQuestionIds,
@@ -410,5 +420,178 @@ describe("wiring — dead code stays dead-code-free", () => {
   it("GROQ_MODEL untouched", () => {
     const src = read("src/app/api/generate-drill/route.ts");
     assert.ok(src.includes('const GROQ_MODEL = "openai/gpt-oss-120b"'), "GROQ_MODEL changed");
+  });
+});
+
+describe("GAP 1 — dossier custody (export / import, no backend)", () => {
+  it("export → validate → import round-trips the three keys", () => {
+    store.set(
+      "nevertwice-weakness",
+      JSON.stringify([{ topic: "Calculus", subtopic: "Differentiation", mistakeCount: 1, lastSeen: 5, trend: "rising" }]),
+    );
+    store.set(
+      "nevertwice-sessions",
+      JSON.stringify([{ id: "s", date: 5, questionsAttempted: 1, correct: 0, mistakes: [], durationSeconds: 60 }]),
+    );
+    store.set(
+      "nevertwice-last-detail",
+      JSON.stringify([
+        { questionId: "q", section: "Mathematics", topic: "Calculus", subtopic: "Differentiation", selected: 0, correctIndex: 1, isCorrect: false },
+      ]),
+    );
+    const snap = exportDossierSnapshot();
+    assert.equal(snap.weakness.length, 1);
+    assert.equal(snap.sessions.length, 1);
+    assert.equal(snap.lastDetail.length, 1);
+    const checked = validateDossierImport(JSON.parse(JSON.stringify(snap)));
+    if (!checked.ok) assert.fail(`expected valid dossier: ${checked.error}`);
+    store.clear();
+    importDossierSnapshot(checked.data);
+    assert.equal(ExamEngine.getWeaknessNodes().length, 1);
+    assert.equal(ExamEngine.getSessions().length, 1);
+    assert.equal(ExamEngine.loadLastDetail().length, 1);
+  });
+
+  it("rejects garbage with an honest error line", () => {
+    const bad = [
+      null,
+      42,
+      "nevertwice",
+      [],
+      {},
+      { weakness: [], sessions: [] },
+      { weakness: [], sessions: [], lastDetail: {} },
+      { weakness: [{ topic: "T" }], sessions: [], lastDetail: [] },
+      {
+        weakness: [],
+        sessions: [{ id: "s", date: 1, questionsAttempted: 1, correct: 0, mistakes: [{ id: "m" }], durationSeconds: 1 }],
+        lastDetail: [],
+      },
+      { weakness: [], sessions: [], lastDetail: [{ questionId: "q" }] },
+    ];
+    for (const b of bad) {
+      const r = validateDossierImport(b);
+      assert.ok(!r.ok, `garbage accepted: ${JSON.stringify(b)}`);
+      if (!r.ok) assert.ok(r.error.length > 0, "empty error line");
+    }
+  });
+
+  it("custody UI is dossier-styled with the honest local-storage line", () => {
+    const root = path.resolve(process.cwd());
+    const src = fs.readFileSync(path.join(root, "src/components/DossierCustody.tsx"), "utf8");
+    assert.ok(src.includes("EXPORT DOSSIER"), "no export button");
+    assert.ok(src.includes("IMPORT DOSSIER"), "no import button");
+    assert.ok(src.includes("Filed locally in this browser"), "honest line missing");
+    assert.ok(src.includes("nevertwice-dossier-"), "filename prefix missing");
+    assert.ok(!src.includes("ACTIVE_DRILL_KEY"), "transient drill key must be skipped");
+    assert.ok(!src.includes("nevertwice:active-drill"), "transient drill key must be skipped");
+    const app = fs.readFileSync(path.join(root, "src/app/app/page.tsx"), "utf8");
+    assert.ok(app.includes("DossierCustody"), "/app missing custody section");
+  });
+});
+
+describe("GAP 2 — all-time exposure + bank coverage", () => {
+  it("getQuestionsForSession increments exposure exactly once per dealt id", () => {
+    const qs = getQuestionsForSession(20);
+    assert.equal(qs.length, 20);
+    const map = getExposure();
+    assert.equal(Object.keys(map).length, 20);
+    for (const q of qs) assert.equal(map[q.id], 1);
+  });
+
+  it("buildDrillFallback records once per deal and prefers never-seen bank stems", () => {
+    const pools = new Map();
+    for (const q of nustSeedQuestions) {
+      const k = `${q.topic}::${q.subtopic}`;
+      if (!pools.has(k)) pools.set(k, { topic: q.topic, subtopic: q.subtopic, seeds: [] });
+      pools.get(k).seeds.push(q);
+    }
+    const entry = [...pools.values()].find((p) => p.seeds.length >= 3);
+    assert.ok(entry, "no subtopic pool with >= 3 seeds");
+    const keepUnseen = new Set(entry.seeds.slice(0, 2).map((s) => s.id));
+    const heavy = {};
+    for (const q of nustSeedQuestions) {
+      if (!keepUnseen.has(q.id)) heavy[q.id] = 5;
+    }
+    store.set(EXPOSURE_KEY, JSON.stringify(heavy));
+    const out = withSeededRandom(
+      99,
+      () => buildDrillFallback([{ topic: entry.topic, subtopic: entry.subtopic, errorType: "concept-gap", count: 2 }]),
+    );
+    assert.equal(out.length, 2);
+    const bankByText = new Map(nustSeedQuestions.map((q) => [norm(q.text), q]));
+    const usedIds = new Set();
+    for (const q of out) {
+      const seed = bankByText.get(norm(q.text));
+      assert.ok(seed, `fallback stem not verbatim: ${q.text}`);
+      usedIds.add(seed.id);
+    }
+    assert.deepEqual(usedIds, keepUnseen);
+    const after = getExposure();
+    for (const q of out) assert.equal(after[q.id], 1);
+  });
+
+  it("buildDrillQuestions (fallback path) records exposure once per deal", async () => {
+    const targets = [{ topic: "Calculus", subtopic: "Differentiation", errorType: "concept-gap", count: 3 }];
+    const out = await buildDrillQuestions(targets);
+    assert.equal(out.length, 3);
+    const after = getExposure();
+    for (const q of out) assert.equal(after[q.id], 1);
+  });
+
+  it("coverage counts distinct bank ids with timesSeen > 0", () => {
+    const ids = nustSeedQuestions.map((q) => q.id);
+    assert.equal(ids.length, 120);
+    assert.equal(getCoverageCount(ids), 0);
+    recordExposureIds([ids[0], ids[1], ids[1]]);
+    assert.equal(getCoverageCount(ids), 2);
+    assert.equal(timesSeen(ids[0]), 1);
+    assert.equal(timesSeen(ids[1]), 2);
+    assert.equal(timesSeen(ids[2]), 0);
+  });
+
+  it("coverage meter renders DOSSIER COMPLETENESS n/120 FILED", () => {
+    const root = path.resolve(process.cwd());
+    const src = fs.readFileSync(path.join(root, "src/components/BankCoverage.tsx"), "utf8");
+    assert.ok(src.includes("DOSSIER COMPLETENESS"), "meter headline missing");
+    assert.ok(src.includes("getCoverageCount"), "meter math not wired");
+    assert.ok(src.includes('role="progressbar"'), "no progressbar semantics");
+  });
+});
+
+describe("GAP 3 — offline service worker + bank-mode badge", () => {
+  const root = path.resolve(process.cwd());
+  const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
+
+  it("versioned worker: cache-first shell, network-only /api, navigation fallback", () => {
+    const sw = read("public/sw.js");
+    assert.ok(sw.includes("nevertwice-v1"), "no versioned cache string");
+    assert.ok(sw.includes("/api/"), "api path not handled");
+    assert.ok(sw.includes("skipWaiting"), "no skipWaiting");
+    assert.ok(sw.includes("clients.claim"), "no clients.claim");
+    assert.ok(sw.includes("navigate"), "no navigation fallback");
+  });
+
+  it("layout registers once; app + session headers show OFFLINE — BANK MODE", () => {
+    const layout = read("src/app/layout.tsx");
+    assert.ok(layout.includes("ServiceWorkerRegister"), "SW not registered in layout");
+    const badge = read("src/components/OfflineBadge.tsx");
+    assert.ok(badge.includes("OFFLINE — BANK MODE"), "badge copy missing");
+    assert.ok(badge.includes("online") && badge.includes("offline"), "no online/offline listeners");
+    for (const p of ["src/app/app/page.tsx", "src/app/session/page.tsx"]) {
+      const src = read(p);
+      assert.ok(src.includes("OfflineBadge"), `${p}: no offline badge`);
+    }
+  });
+});
+
+describe("GAP 4 — NET-difficulty calibration", () => {
+  it("prompt carries the single-concept ~54s line with every existing line intact", () => {
+    const p = buildDrillPrompt([{ topic: "Calculus", subtopic: "Differentiation", errorType: "concept-gap", count: 1 }]);
+    assert.ok(p.includes("uniformly across positions"), "existing uniform-distribution line lost");
+    assert.ok(
+      p.includes("NET-level difficulty: single-concept questions solvable in ~54 seconds; no multi-step monsters, no trick options a real paper would never print."),
+      "calibration line missing",
+    );
   });
 });

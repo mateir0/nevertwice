@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PacingRing } from "@/components/PacingRing";
+import { OfflineBadge } from "@/components/OfflineBadge";
 import { ERROR_TYPES, ExamEngine, TIMEOUT_ANSWER, mistakesFromAnswers, nodeKey } from "@/engine/exam-engine";
 import { clearActiveDrill, loadActiveDrill, type DrillPlan } from "@/engine/drill-planner";
 import type { ErrorType, Question, Session } from "@/types";
@@ -46,7 +47,14 @@ export default function SessionPage() {
   // beating, auto-advance owns the transition — no NEXT/FINISH is rendered.
   const [advancing, setAdvancing] = useState(false);
 
+  // Deal-once ref: the mount effect below deals bank questions (recording
+  // all-time exposure). In dev StrictMode the effect double-fires — the
+  // ref keeps the deal (and its exposure increment) to exactly one.
+  const dealtRef = useRef(false);
+
   useEffect(() => {
+    if (dealtRef.current) return;
+    dealtRef.current = true;
     const active = loadActiveDrill();
     const qs = active ? active.questions : getQuestionsForSession(20);
     if (active) setDrill(active);
@@ -197,6 +205,7 @@ export default function SessionPage() {
             Q {index + 1}/{total}
             {drill ? " · TARGETED DRILL" : ""}
           </p>
+          <OfflineBadge />
         </div>
         <PacingRing secondsRemaining={secondsLeft} totalSeconds={TOTAL_SECONDS} size={64} strokeWidth={5} />
       </header>

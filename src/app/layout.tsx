@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Russo_One, Courier_Prime } from "next/font/google";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const russo = Russo_One({
@@ -41,6 +42,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${russo.variable} ${courier.variable}`}>
       <body className="min-h-[100dvh] bg-night font-type text-parchment antialiased">
+        <ServiceWorkerRegister />
         {children}
       </body>
     </html>

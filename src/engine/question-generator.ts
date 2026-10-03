@@ -1,5 +1,6 @@
 import type { ErrorType, Question } from "@/types";
 import { getRecentQuestionIds, nustSeedQuestions } from "@/config/exams/nust";
+import { getExposure, recordExposureIds } from "@/engine/exposure";
 import { sanitizeStem } from "@/engine/format-math";
 
 /**
@@ -91,6 +92,7 @@ export function buildDrillPrompt(targets: DrillGenTarget[]): string {
     "Distribute the correct answer uniformly across positions 0–3 — do not cluster it on one letter.",
     "Write each question as a real exam stem. Never prefix with 'Drill', 'Practice', or topic names.",
     "Use Unicode math notation directly — superscripts (x², x³), √, π, θ, ×, ÷, ±, →, ∞. Never caret notation, LaTeX, backslashes, or \\( \\) delimiters.",
+    "NET-level difficulty: single-concept questions solvable in ~54 seconds; no multi-step monsters, no trick options a real paper would never print.",
   ].join("\n");
 }
 
@@ -150,6 +152,8 @@ function slug(s: string): string {
  *  - Never emit the same normalized text twice within one drill UNTIL the
  *    eligible pool is exhausted; then cycle verbatim repeats.
  *  - Prefer seeds unseen in the last 3 sessions when the pool allows it.
+ *  - Within the eligible pool, weight by all-time exposure ascending —
+ *    never-seen first, then least-seen (stable over bank order).
  *  - Apply shuffleOptions() to every emitted question so option order is
  *    unbiased and correctIndex stays correct.
  */
@@ -162,15 +166,27 @@ export function buildDrillFallback(targets: DrillGenTarget[]): Question[] {
   } catch {
     recent = new Set();
   }
+  let exposure: Record<string, number>;
+  try {
+    exposure = getExposure();
+  } catch {
+    exposure = {};
+  }
+  const dealtBankIds: string[] = [];
 
   targets.forEach((t, ti) => {
     const sameSub = nustSeedQuestions.filter((q) => q.topic === t.topic && q.subtopic === t.subtopic);
     const sameTopic = nustSeedQuestions.filter((q) => q.topic === t.topic);
     const pool = sameSub.length > 0 ? sameSub : sameTopic.length > 0 ? sameTopic : nustSeedQuestions;
     // Freshness preference: skip bank questions dealt in the last 3
-    // sessions unless that would empty the pool.
+    // sessions unless that would empty the pool. Within the eligible
+    // pool, never-seen (all-time) comes first, then least-seen — stable
+    // over bank order so ties stay deterministic.
     const unrecent = pool.filter((q) => !recent.has(q.id));
-    const eligible = unrecent.length > 0 ? unrecent : pool;
+    const base = unrecent.length > 0 ? unrecent : pool;
+    const eligible = [...base].sort(
+      (a, b) => (exposure[a.id] ?? 0) - (exposure[b.id] ?? 0),
+    );
 
     for (let k = 0; k < Math.max(0, t.count); k++) {
       let pick = eligible[(k + ti) % eligible.length];
@@ -187,6 +203,7 @@ export function buildDrillFallback(targets: DrillGenTarget[]): Question[] {
       }
       const text = sanitizeStem(pick.text);
       emitted.add(normalizeText(text));
+      dealtBankIds.push(pick.id);
       out.push(
         shuffleOptions({
           id: `drill-${slug(t.subtopic)}-${ti}-${k + 1}`,
@@ -202,6 +219,11 @@ export function buildDrillFallback(targets: DrillGenTarget[]): Question[] {
       );
     }
   });
+  // All-time exposure: exactly one increment per deal — the underlying
+  // bank stems actually shown plus the emitted drill ids. The pipeline
+  // below never re-records the fallback branch, so StrictMode sharing one
+  // in-flight promise cannot double-fire.
+  recordExposureIds([...dealtBankIds, ...out.map((q) => q.id)]);
   return out;
 }
 
@@ -273,15 +295,33 @@ async function tryGroqRoute(targets: DrillGenTarget[], timeoutMs = 30000): Promi
  *
  * Every question on BOTH branches leaves here via shuffleOptions, so
  * correctIndex is remapped and A/B/C/D placement is unbiased.
+ *
+ * StrictMode guard: concurrent calls with identical targets share one
+ * in-flight promise, so the double-mounted effect in dev deals (and
+ * records exposure) exactly once. The fallback branch records its own
+ * exposure; this wrapper records only the Groq branch — never both.
  */
-export async function buildDrillQuestions(targets: DrillGenTarget[]): Promise<Question[]> {
+let inflightDrill: { key: string; promise: Promise<Question[]> } | null = null;
+
+export function buildDrillQuestions(targets: DrillGenTarget[]): Promise<Question[]> {
   const active = targets.filter((t) => t.count > 0);
-  if (active.length === 0) return [];
-  try {
-    return assignToSlots(await tryGroqRoute(active), active);
-  } catch {
-    return buildDrillFallback(active);
-  }
+  if (active.length === 0) return Promise.resolve([]);
+  const key = JSON.stringify(active);
+  if (inflightDrill && inflightDrill.key === key) return inflightDrill.promise;
+  const run = async (): Promise<Question[]> => {
+    try {
+      const out = assignToSlots(await tryGroqRoute(active), active);
+      recordExposureIds(out.map((q) => q.id));
+      return out;
+    } catch {
+      return buildDrillFallback(active);
+    } finally {
+      if (inflightDrill?.promise === promise) inflightDrill = null;
+    }
+  };
+  const promise = run();
+  inflightDrill = { key, promise };
+  return promise;
 }
 
 /** Back-compat alias — same pipeline, same guarantees. */

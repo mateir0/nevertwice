@@ -1,5 +1,6 @@
 import type { ExamConfig, Question } from "@/types";
 import { shuffleOptions } from "@/engine/question-generator";
+import { getExposure, recordExposureIds } from "@/engine/exposure";
 import { nustBank } from "./nust-bank";
 
 /**
@@ -130,9 +131,14 @@ function shuffled<T>(arr: T[]): T[] {
 
 export function getQuestionsForSession(count = 20): Question[] {
   const recent = new Set(getRecentQuestionIds());
-  // Prefer questions unseen in the last 3 sessions.
-  let pool = nustSeedQuestions.filter((q) => !recent.has(q.id));
-  let selected = shuffled(pool).slice(0, Math.min(count, pool.length));
+  const exposure = getExposure();
+  // Prefer questions unseen in the last 3 sessions; within that, weight by
+  // all-time exposure ascending — never-seen first, then least-seen.
+  // Shuffle first so ties within an exposure tier stay random (stable sort).
+  const pool = shuffled(nustSeedQuestions.filter((q) => !recent.has(q.id))).sort(
+    (a, b) => (exposure[a.id] ?? 0) - (exposure[b.id] ?? 0),
+  );
+  let selected = pool.slice(0, Math.min(count, pool.length));
 
   if (selected.length < count) {
     // Bank can't fill 20 fresh (only possible if the bank shrinks below
@@ -158,6 +164,9 @@ export function getQuestionsForSession(count = 20): Question[] {
   }
 
   recordSeenQuestionIds(selected.map((q) => q.id));
+  // All-time exposure: exactly one increment per deal. The session page
+  // deals once per mount (deal-once ref), so StrictMode cannot double-fire.
+  recordExposureIds(selected.map((q) => q.id));
   // Every assembled question gets a fresh unbiased option shuffle so
   // correctIndex is remapped and the A/B/C/D position is not biased by
   // the seed data (which is almost all index 0).
