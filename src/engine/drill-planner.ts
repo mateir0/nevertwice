@@ -33,6 +33,8 @@ export interface DrillPlan {
   reason: string;
   /** Empty until the caller fills it via buildDrillQuestions(). */
   questions: Question[];
+  /** "mock" for a full-length NET-format simulation; drills omit this. */
+  kind?: "mock" | "drill";
 }
 
 export const ACTIVE_DRILL_KEY = "nevertwice:active-drill";

@@ -9,7 +9,6 @@ import type {
 
 /** Sentinel answer recorded when the per-question timer expires. */
 export const TIMEOUT_ANSWER = -1;
-
 export function nodeKey(topic: string, subtopic: string): string {
   return `${topic}::${subtopic}`;
 }
@@ -52,6 +51,22 @@ export function mistakesFromAnswers(
     });
   });
   return { correct, mistakes };
+}
+
+/**
+ * Full-mock global expiry: every unanswered question files as a
+ * time-pressure mistake (sentinel answer, same as a per-question timeout).
+ * Answered questions are untouched. Pure — the session page applies it
+ * when the 180:00 countdown reaches zero, then finishes.
+ */
+export function applyMockExpiry(
+  answers: (number | null)[],
+  errorKinds: (ErrorType | null)[],
+): { answers: (number | null)[]; errorKinds: (ErrorType | null)[] } {
+  return {
+    answers: answers.map((a) => (a === null ? TIMEOUT_ANSWER : a)),
+    errorKinds: errorKinds.map((e, i) => (answers[i] === null ? "time-pressure" : e)),
+  };
 }
 
 export const ERROR_TYPES: {

@@ -1,0 +1,165 @@
+import { NextResponse } from "next/server";
+import {
+  buildMockPrompt,
+  parseStrictDrillJson,
+  MOCK_BATCH_MAX,
+  type MockSubjectCount,
+} from "@/engine/question-generator";
+
+/**
+ * POST /api/generate-mock — server-side Groq cloud link of the full-mock chain.
+ *
+ * Mirrors /api/generate-drill with its own contract and its OWN rate-limit
+ * bucket (mock batches never consume drill quota and vice versa). The
+ * GROQ_API_KEY lives ONLY here: plain process.env (no NEXT_PUBLIC_
+ * prefix, so it is never inlined into the client bundle), never logged,
+ * never echoed in responses, never committed (see .env.example).
+ * Any failure → non-2xx JSON error → the client falls back to verbatim
+ * bank cycling for the batch.
+ */
+
+export const dynamic = "force-dynamic";
+
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+// Same accessible flagship as the drill route (see generate-drill).
+const GROQ_MODEL = "openai/gpt-oss-120b";
+
+const VALID_SUBJECTS = new Set([
+  "Mathematics",
+  "Physics",
+  "Chemistry",
+  "English",
+  "Intelligence",
+]);
+
+// ---------- per-IP rate limiting (SEPARATE mock bucket) ----------
+
+// One full mock ≈ 7 batches: 25 mock-batch requests per IP per hour
+// allows ~3 full mocks/hour without touching the drill bucket.
+const MOCK_RATE_LIMIT_MAX = 25;
+const MOCK_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const mockRateBuckets = new Map<string, { count: number; windowStart: number }>();
+
+/** Client IP: first entry of x-forwarded-for, else "unknown" (one bucket). */
+function clientIp(req: Request): string {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return "unknown";
+}
+
+/**
+ * True when this IP already used its 25 mock batches in the current hour.
+ * Successful check consumes one slot. Expired windows reset on next hit;
+ * stale buckets are swept opportunistically to bound memory.
+ */
+function mockRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const bucket = mockRateBuckets.get(ip);
+  if (!bucket || now - bucket.windowStart >= MOCK_RATE_LIMIT_WINDOW_MS) {
+    mockRateBuckets.set(ip, { count: 1, windowStart: now });
+    if (mockRateBuckets.size > 1000) {
+      for (const [k, b] of mockRateBuckets) {
+        if (now - b.windowStart >= MOCK_RATE_LIMIT_WINDOW_MS) mockRateBuckets.delete(k);
+      }
+    }
+    return false;
+  }
+  if (bucket.count >= MOCK_RATE_LIMIT_MAX) return true;
+  bucket.count += 1;
+  return false;
+}
+
+function validSubjects(v: unknown): v is MockSubjectCount[] {
+  if (!Array.isArray(v) || v.length === 0 || v.length > MOCK_BATCH_MAX) return false;
+  let total = 0;
+  for (const s of v) {
+    if (typeof s !== "object" || s === null) return false;
+    const r = s as Record<string, unknown>;
+    if (typeof r.subject !== "string" || !VALID_SUBJECTS.has(r.subject)) return false;
+    if (!Number.isInteger(r.count) || (r.count as number) < 1 || (r.count as number) > MOCK_BATCH_MAX) return false;
+    total += r.count as number;
+  }
+  return total >= 1 && total <= MOCK_BATCH_MAX;
+}
+
+async function callGroq(prompt: string, apiKey: string, timeoutMs = 60000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a mock-paper engine for full-length NUST Entry Test simulations. Output ONLY strict JSON — no markdown, no fences, no commentary. Write each question as a real exam stem. Never prefix with 'Mock', 'Practice', or subject names. Use Unicode math notation directly — superscripts (x², x³), √, π, θ, ×, ÷, ±, →, ∞. Never caret notation, LaTeX, backslashes, or delimiters.",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.4,
+        // Explanations cost tokens; mock batches cap at 12 questions.
+        max_tokens: 4096,
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`groq http ${res.status}`);
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: unknown } }[];
+    };
+    const content = data?.choices?.[0]?.message?.content;
+    if (typeof content !== "string") throw new Error("groq bad shape");
+    return parseStrictDrillJson(content);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function POST(req: Request): Promise<NextResponse> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    // Key unset (e.g. local dev without Groq) — client cycles the bank.
+    return NextResponse.json({ error: "groq-unconfigured" }, { status: 503 });
+  }
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "bad-json" }, { status: 400 });
+  }
+  const subjects = (body as { subjects?: unknown } | null)?.subjects;
+  if (!validSubjects(subjects)) {
+    // Malformed requests never touch Groq and never consume rate-limit quota.
+    return NextResponse.json({ error: "bad-subjects" }, { status: 400 });
+  }
+
+  // Quota guard BEFORE Groq: 25 mock batches per IP per hour, drill bucket
+  // untouched. The client treats 429 like any other failure and cycles
+  // the bank for the batch.
+  if (mockRateLimited(clientIp(req))) {
+    return NextResponse.json({ error: "rate-limited" }, { status: 429 });
+  }
+
+  const prompt = buildMockPrompt(subjects);
+  try {
+    const items = await callGroq(prompt, apiKey);
+    return NextResponse.json({ items });
+  } catch {
+    try {
+      // One retry, same prompt and validation.
+      const items = await callGroq(prompt, apiKey);
+      return NextResponse.json({ items });
+    } catch {
+      return NextResponse.json({ error: "groq-failed" }, { status: 502 });
+    }
+  }
+}

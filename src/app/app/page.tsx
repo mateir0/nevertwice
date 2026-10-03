@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Crosshair, Timer, Zap } from "lucide-react";
+import { Crosshair, ScrollText, Timer, Zap } from "lucide-react";
 import { Wordmark } from "@/components/Wordmark";
 import { WeaknessHeatmap } from "@/components/WeaknessHeatmap";
 import { RecentSessions } from "@/components/RecentSessions";
@@ -12,7 +12,7 @@ import { DossierCustody } from "@/components/DossierCustody";
 import { OfflineBadge } from "@/components/OfflineBadge";
 import { useSessions, useWeaknessNodes } from "@/hooks/useExam";
 import { planDrill, planToGenTargets, saveActiveDrill, type DrillPlan } from "@/engine/drill-planner";
-import { buildDrillQuestions } from "@/engine/question-generator";
+import { buildDrillQuestions, buildMockQuestions } from "@/engine/question-generator";
 import type { Question } from "@/types";
 
 export default function AppDashboard() {
@@ -22,6 +22,10 @@ export default function AppDashboard() {
   const [plan, setPlan] = useState<DrillPlan | null>(null);
   const [drillQuestions, setDrillQuestions] = useState<Question[] | null>(null);
   const [generating, setGenerating] = useState(false);
+  // Full mock builds on demand (button tap): ~7 parallel Groq batches take
+  // ~30s, bank cycling when offline. No mount effect — never burn quota on
+  // a plain /app visit.
+  const [mockGenerating, setMockGenerating] = useState(false);
 
   // Scoring is sync and instant: compute the plan on mount / sessions change.
   useEffect(() => {
@@ -56,6 +60,27 @@ export default function AppDashboard() {
     router.push("/session");
   }
 
+  function beginMock(): void {
+    if (mockGenerating) return;
+    setMockGenerating(true);
+    buildMockQuestions().then((qs) => {
+      if (!qs || qs.length === 0) {
+        setMockGenerating(false);
+        return;
+      }
+      const now = Date.now();
+      saveActiveDrill({
+        id: `mock-${now}`,
+        createdAt: now,
+        targets: [],
+        reason: "FULL MOCK — NET FORMAT",
+        questions: qs,
+        kind: "mock",
+      });
+      router.push("/session?mode=mock");
+    });
+  }
+
   const plannedTotal = plan ? plan.targets.reduce((n, t) => n + t.count, 0) : 0;
 
   return (
@@ -81,6 +106,26 @@ export default function AppDashboard() {
 
       <main className="grid gap-5 md:grid-cols-[1.2fr_1fr] md:items-start">
         <div className="space-y-5">
+          <section aria-label="Full mock" className="card reveal" style={{ animationDelay: "60ms" }}>
+            <p className="label">
+              FULL MOCK — NET FORMAT
+            </p>
+            <p className="font-display mt-1 text-2xl tracking-wide text-parchment">
+              200 QUESTIONS · 180 MINUTES · NET WEIGHTING
+            </p>
+            <p className="mt-1 font-type text-xs leading-relaxed tracking-widest text-faded">
+              Full NET-format simulation — verified bank + generated. NUST doesn&apos;t release official past papers.
+            </p>
+            <button
+              onClick={beginMock}
+              disabled={mockGenerating}
+              className="btn-primary mt-4 flex w-full items-center justify-center gap-2 text-center text-lg disabled:cursor-wait disabled:opacity-50"
+            >
+              <ScrollText className="h-5 w-5" aria-hidden="true" />
+              {mockGenerating ? "PRINTING YOUR PAPER…" : "BEGIN MOCK"}
+            </button>
+          </section>
+
           {plan ? (
             <section aria-label="Next drill" className="card reveal" style={{ animationDelay: "90ms" }}>
               <p className="label">

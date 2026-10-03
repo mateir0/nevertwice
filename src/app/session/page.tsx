@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PacingRing } from "@/components/PacingRing";
 import { OfflineBadge } from "@/components/OfflineBadge";
-import { ERROR_TYPES, ExamEngine, TIMEOUT_ANSWER, mistakesFromAnswers, nodeKey } from "@/engine/exam-engine";
+import { ERROR_TYPES, ExamEngine, TIMEOUT_ANSWER, applyMockExpiry, mistakesFromAnswers, nodeKey } from "@/engine/exam-engine";
+import { MOCK_TOTAL_SECONDS } from "@/engine/question-generator";
 import { clearActiveDrill, loadActiveDrill, type DrillPlan } from "@/engine/drill-planner";
 import type { ErrorType, Question, Session } from "@/types";
 import { displayMath } from "@/engine/format-math";
@@ -13,6 +14,12 @@ import { getQuestionsForSession } from "@/config/exams";
 import { nustConfig } from "@/config/exams/nust";
 
 const TOTAL_SECONDS = nustConfig.secondsPerQuestion;
+
+/** Global full-mock countdown, mm:ss ("180:00" at paper start). */
+function formatMockClock(totalSeconds: number): string {
+  const s = Math.max(0, totalSeconds);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
 
 /** Post-answer debrief panel: the correct letter + why the answer is right.
  * The container mounts in its final layout immediately (one instant reflow);
@@ -51,11 +58,19 @@ export default function SessionPage() {
   // all-time exposure). In dev StrictMode the effect double-fires — the
   // ref keeps the deal (and its exposure increment) to exactly one.
   const dealtRef = useRef(false);
+  // Full-mock mode (?mode=mock or an active plan with kind "mock"): one
+  // global 180:00 countdown replaces the per-question PacingRing. The
+  // per-question flow (answer → debrief → classify) is unchanged.
+  const [isMock, setIsMock] = useState(false);
+  const [mockSecondsLeft, setMockSecondsLeft] = useState(MOCK_TOTAL_SECONDS);
 
   useEffect(() => {
     if (dealtRef.current) return;
     dealtRef.current = true;
     const active = loadActiveDrill();
+    const mockByUrl =
+      typeof window !== "undefined" && new URLSearchParams(window.location.search).get("mode") === "mock";
+    setIsMock(mockByUrl || active?.kind === "mock");
     const qs = active ? active.questions : getQuestionsForSession(20);
     if (active) setDrill(active);
     setQuestions(qs);
@@ -128,14 +143,36 @@ export default function SessionPage() {
   // The timer runs ONLY while the current question is unanswered. Answering
   // freezes it; on expiry the question is filed as a time-pressure mistake
   // and the session auto-advances (auto-finishes on the last question).
+  // Skipped in full-mock mode — the global 180:00 countdown owns the clock.
   useEffect(() => {
-    if (!questions) return;
+    if (!questions || isMock) return;
     if (answers[index] !== null) return;
     if (secondsLeft <= 0) {
       expireCurrent();
       return;
     }
     const t = setTimeout(() => setSecondsLeft((s) => (s <= 0 ? 0 : s - 1)), 1000);
+    return () => clearTimeout(t);
+  });
+
+  /**
+   * Full-mock global countdown. It never freezes on answering — when it
+   * reaches zero every still-unanswered question files as time-pressure
+   * and the paper finishes.
+   */
+  function expireMock(): void {
+    if (!questions || finishing) return;
+    const { answers: nextAnswers, errorKinds: nextErrors } = applyMockExpiry(answers, errorKinds);
+    finishWith(nextAnswers, nextErrors);
+  }
+
+  useEffect(() => {
+    if (!questions || !isMock || finishing) return;
+    if (mockSecondsLeft <= 0) {
+      expireMock();
+      return;
+    }
+    const t = setTimeout(() => setMockSecondsLeft((s) => (s <= 0 ? 0 : s - 1)), 1000);
     return () => clearTimeout(t);
   });
 
@@ -200,14 +237,23 @@ export default function SessionPage() {
     <div className="mx-auto w-full max-w-[480px] px-4 py-4">
       <header className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <p className="font-display text-2xl tracking-wide text-parchment">{drill ? "TARGETED DRILL" : "NET SESSION"}</p>
+          <p className="font-display text-2xl tracking-wide text-parchment">{isMock ? "FULL MOCK" : drill ? "TARGETED DRILL" : "NET SESSION"}</p>
           <p className="font-type text-xs tracking-widest text-faded" aria-live="polite">
             Q {index + 1}/{total}
-            {drill ? " · TARGETED DRILL" : ""}
+            {isMock ? " · FULL MOCK" : drill ? " · TARGETED DRILL" : ""}
           </p>
           <OfflineBadge />
         </div>
-        <PacingRing secondsRemaining={secondsLeft} totalSeconds={TOTAL_SECONDS} size={64} strokeWidth={5} />
+        {isMock ? (
+          <p
+            className="font-type text-3xl font-bold tracking-widest text-amber"
+            aria-label={`Time remaining ${formatMockClock(mockSecondsLeft)}`}
+          >
+            {formatMockClock(mockSecondsLeft)}
+          </p>
+        ) : (
+          <PacingRing secondsRemaining={secondsLeft} totalSeconds={TOTAL_SECONDS} size={64} strokeWidth={5} />
+        )}
       </header>
 
       <div className="bronze-frame mb-4 h-2 overflow-hidden bg-panel" aria-hidden="true">

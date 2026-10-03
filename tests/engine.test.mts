@@ -36,13 +36,22 @@ import {
   buildDrillFallback,
   buildDrillPrompt,
   buildDrillQuestions,
+  buildMockPrompt,
+  buildMockQuestions,
+  MOCK_BATCH_MAX,
+  MOCK_SUBJECTS,
+  MOCK_TOTAL_QUESTIONS,
+  MOCK_TOTAL_SECONDS,
   parseStrictDrillJson,
+  planMockBatches,
+  planMockFill,
   shuffleOptions,
 } from "../src/engine/question-generator.ts";
 import { planDrill, planToGenTargets } from "../src/engine/drill-planner.ts";
 import {
   ExamEngine,
   TIMEOUT_ANSWER,
+  applyMockExpiry,
   exportDossierSnapshot,
   importDossierSnapshot,
   mistakesFromAnswers,
@@ -593,5 +602,159 @@ describe("GAP 4 — NET-difficulty calibration", () => {
       p.includes("NET-level difficulty: single-concept questions solvable in ~54 seconds; no multi-step monsters, no trick options a real paper would never print."),
       "calibration line missing",
     );
+  });
+});
+
+describe("FULL MOCK planner — 200Q NET weighting, bank-first fill", () => {
+  it("subjects sum to exactly 200 with the 80/60/30/20/10 split", () => {
+    assert.deepEqual(
+      MOCK_SUBJECTS.map((s) => [s.subject, s.count]),
+      [
+        ["Mathematics", 80],
+        ["Physics", 60],
+        ["Chemistry", 30],
+        ["English", 20],
+        ["Intelligence", 10],
+      ],
+    );
+    assert.equal(MOCK_TOTAL_QUESTIONS, 200);
+    assert.equal(
+      MOCK_SUBJECTS.reduce((n, s) => n + s.count, 0),
+      200,
+    );
+  });
+
+  it("bank-first fill never exceeds bank per-subject counts; remainder math correct", () => {
+    const bankCounts = {};
+    for (const q of nustSeedQuestions) bankCounts[q.section] = (bankCounts[q.section] ?? 0) + 1;
+    const groqBySubject = {};
+    for (const f of planMockFill()) {
+      assert.ok(f.bankTake <= (bankCounts[f.subject] ?? 0), `${f.subject}: bankTake exceeds bank`);
+      assert.equal(f.bankTake + f.groqNeed, f.need);
+      groqBySubject[f.subject] = f.groqNeed;
+    }
+    assert.deepEqual(groqBySubject, {
+      Mathematics: 44,
+      Physics: 30,
+      Chemistry: 6,
+      English: 2,
+      Intelligence: 0,
+    });
+  });
+
+  it("remainder chunks into ≤12-question batches (≈7 batches for 82)", () => {
+    const batches = planMockBatches(planMockFill());
+    let total = 0;
+    for (const b of batches) {
+      const n = b.reduce((x, s) => x + s.count, 0);
+      assert.ok(n >= 1 && n <= MOCK_BATCH_MAX, `batch size ${n}`);
+      total += n;
+    }
+    assert.equal(total, 82);
+    assert.equal(batches.length, 7);
+  });
+});
+
+describe("FULL MOCK prompt — strict contract without error targeting", () => {
+  it("carries the contract + calibration, no drill error-type targeting", () => {
+    const p = buildMockPrompt([{ subject: "Mathematics", count: 12 }]);
+    assert.ok(p.includes("Write exactly 12 multiple-choice questions"), "count line missing");
+    assert.ok(p.includes("Balanced NET paper"), "balanced-paper brief missing");
+    assert.ok(p.includes("STRICT OUTPUT CONTRACT"), "contract missing");
+    assert.ok(
+      p.includes("NET-level difficulty: single-concept questions solvable in ~54 seconds; no multi-step monsters, no trick options a real paper would never print."),
+      "calibration missing",
+    );
+    assert.ok(p.includes("uniformly across positions"), "key-spread line missing");
+    for (const w of ["MISREAD", "FORMULA-ERROR", "TIME-PRESSURE", "CONCEPT-GAP", "SILLY-MISTAKE", "errorType"]) {
+      assert.ok(!p.includes(w), `drill targeting leaked: ${w}`);
+    }
+  });
+
+  it("shared validator accepts a valid mock item, rejects bad ones", () => {
+    const ok = JSON.stringify([
+      { text: "Mock Q?", options: ["A", "B", "C", "D"], correctIndex: 1, explanation: "B is right because the key step applies." },
+    ]);
+    assert.equal(parseStrictDrillJson(ok).length, 1);
+    const noExpl = JSON.stringify([{ text: "Q?", options: ["A", "B", "C", "D"], correctIndex: 0 }]);
+    assert.throws(() => parseStrictDrillJson(noExpl), /bad explanation/);
+    const dup = JSON.stringify([
+      { text: "Q?", options: ["A", "A", "B", "C"], correctIndex: 0, explanation: "A is right." },
+    ]);
+    assert.throws(() => parseStrictDrillJson(dup), /duplicate options/);
+  });
+});
+
+describe("FULL MOCK pipeline — bank cycling without Groq", () => {
+  it(
+    "assembles 200 verbatim questions with the NET split; exposure once per id",
+    async () => {
+      const paper = await buildMockQuestions();
+      assert.equal(paper.length, 200);
+      const counts = {};
+      for (const q of paper) counts[q.section] = (counts[q.section] ?? 0) + 1;
+      assert.deepEqual(counts, {
+        Mathematics: 80,
+        Physics: 60,
+        Chemistry: 30,
+        English: 20,
+        Intelligence: 10,
+      });
+      const bankByText = new Map(nustSeedQuestions.map((q) => [norm(q.text), q]));
+      for (const q of paper) {
+        const seed = bankByText.get(norm(q.text));
+        assert.ok(seed, `non-verbatim stem: ${q.text}`);
+        assert.equal(q.options[q.correctIndex], seed.options[seed.correctIndex], "key mismatch");
+        assert.ok(q.explanation.trim().length > 0, "missing explanation");
+      }
+      const ids = new Set(paper.map((q) => q.id));
+      assert.equal(ids.size, 200, "emitted ids not unique");
+      const after = getExposure();
+      for (const q of paper) assert.equal(after[q.id], 1);
+    },
+    { timeout: 30000 },
+  );
+});
+
+describe("FULL MOCK timer — 180min constant, expiry files time-pressure", () => {
+  it("mock clock is 180 minutes", () => {
+    assert.equal(MOCK_TOTAL_SECONDS, 180 * 60);
+  });
+
+  it("applyMockExpiry files only the unanswered as time-pressure", () => {
+    const out = applyMockExpiry([2, null, 0, null], ["misread", null, null, null]);
+    assert.deepEqual(out.answers, [2, TIMEOUT_ANSWER, 0, TIMEOUT_ANSWER]);
+    assert.deepEqual(out.errorKinds, ["misread", "time-pressure", null, "time-pressure"]);
+  });
+
+  it("session page wires ?mode=mock to the global countdown", () => {
+    const root = path.resolve(process.cwd());
+    const src = fs.readFileSync(path.join(root, "src/app/session/page.tsx"), "utf8");
+    assert.ok(src.includes("mode") && src.includes("mock"), "no mock mode detection");
+    assert.ok(src.includes("MOCK_TOTAL_SECONDS"), "no 180min clock");
+    assert.ok(src.includes("applyMockExpiry"), "expiry fold not wired");
+  });
+
+  it("mock route has its own 25/hr bucket and ≤12 validation", () => {
+    const root = path.resolve(process.cwd());
+    const mock = fs.readFileSync(path.join(root, "src/app/api/generate-mock/route.ts"), "utf8");
+    assert.ok(mock.includes("25"), "no 25/hr mock bucket");
+    assert.ok(mock.includes("buildMockPrompt"), "prompt not wired");
+    assert.ok(mock.includes("parseStrictDrillJson"), "validator not wired");
+    assert.ok(!mock.includes("rateBuckets"), "drill bucket touched — must stay separate");
+    const drill = fs.readFileSync(path.join(root, "src/app/api/generate-drill/route.ts"), "utf8");
+    assert.ok(drill.includes("RATE_LIMIT_MAX = 10"), "drill bucket changed");
+  });
+
+  it("mock card is honest — FULL MOCK, never past papers", () => {
+    const root = path.resolve(process.cwd());
+    const app = fs.readFileSync(path.join(root, "src/app/app/page.tsx"), "utf8");
+    assert.ok(app.includes("FULL MOCK"), "no FULL MOCK card");
+    assert.ok(
+      app.includes("NUST doesn") && app.includes("official past papers"),
+      "honest subline missing",
+    );
+    assert.ok(app.includes("PRINTING YOUR PAPER"), "no printing state");
+    assert.ok(!app.includes("PAST PAPERS"), "past-papers label leaked");
   });
 });

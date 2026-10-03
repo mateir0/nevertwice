@@ -1,5 +1,5 @@
 import type { ErrorType, Question } from "@/types";
-import { getRecentQuestionIds, nustSeedQuestions } from "@/config/exams/nust";
+import { getRecentQuestionIds, nustSeedQuestions, recordSeenQuestionIds } from "@/config/exams/nust";
 import { getExposure, recordExposureIds } from "@/engine/exposure";
 import { sanitizeStem } from "@/engine/format-math";
 
@@ -327,4 +327,312 @@ export function buildDrillQuestions(targets: DrillGenTarget[]): Promise<Question
 /** Back-compat alias — same pipeline, same guarantees. */
 export async function generateDrillQuestions(targets: DrillGenTarget[]): Promise<Question[]> {
   return buildDrillQuestions(targets);
+}
+
+// ---------- full mock (200Q NET-format simulation) ----------
+
+/**
+ * FULL MOCK — a full-length NET-format simulation, never labeled "past
+ * papers" (NUST does not release them). Bank-first, then Groq: per subject
+ * the verified bank deals first (never-seen preferred, shuffle, verbatim
+ * stems — same guarantees as the drill fallback), Groq generates the
+ * remainder. Any Groq batch failure falls back to verbatim bank cycling
+ * for its subject: repeats acceptable, wrong keys never acceptable.
+ */
+
+export const MOCK_TOTAL_QUESTIONS = 200;
+export const MOCK_TOTAL_SECONDS = 180 * 60;
+export const MOCK_BATCH_MAX = 12;
+
+export interface MockSubjectCount {
+  subject: string;
+  count: number;
+}
+
+/** NET-Engineering weighting. Section names match the bank exactly. */
+export const MOCK_SUBJECTS: { subject: string; count: number }[] = [
+  { subject: "Mathematics", count: 80 },
+  { subject: "Physics", count: 60 },
+  { subject: "Chemistry", count: 30 },
+  { subject: "English", count: 20 },
+  { subject: "Intelligence", count: 10 },
+];
+
+export interface MockFill {
+  subject: string;
+  need: number;
+  bankTake: number;
+  groqNeed: number;
+}
+
+/** Bank-first fill plan: min(need, bank) verbatim per subject, Groq the rest. */
+export function planMockFill(): MockFill[] {
+  return MOCK_SUBJECTS.map(({ subject, count: need }) => {
+    const bankCount = nustSeedQuestions.filter((q) => q.section === subject).length;
+    const bankTake = Math.min(need, bankCount);
+    return { subject, need, bankTake, groqNeed: need - bankTake };
+  });
+}
+
+/**
+ * Flatten every subject's Groq remainder into ≤12-question batches,
+ * preserving subject order (a batch may span two subjects). 82 remainder
+ * questions → 7 batches, fired in parallel.
+ */
+export function planMockBatches(fills: MockFill[]): MockSubjectCount[][] {
+  const slots: string[] = [];
+  for (const f of fills) {
+    for (let i = 0; i < Math.max(0, f.groqNeed); i++) slots.push(f.subject);
+  }
+  const batches: MockSubjectCount[][] = [];
+  for (let i = 0; i < slots.length; i += MOCK_BATCH_MAX) {
+    const chunk = slots.slice(i, i + MOCK_BATCH_MAX);
+    const counts: MockSubjectCount[] = [];
+    for (const subject of chunk) {
+      const last = counts[counts.length - 1];
+      if (last && last.subject === subject) last.count += 1;
+      else counts.push({ subject, count: 1 });
+    }
+    batches.push(counts);
+  }
+  return batches;
+}
+
+/**
+ * Mock prompt — same strict JSON contract, Unicode-math rules, and
+ * NET-difficulty calibration as drills, but NO error-type targeting:
+ * this is an exam, not a drill.
+ */
+export function buildMockPrompt(subjectCounts: MockSubjectCount[]): string {
+  const brief = subjectCounts.map((s) => `- ${s.subject}: ${s.count} question(s).`).join("\n");
+  const total = subjectCounts.reduce((n, s) => n + Math.max(0, s.count), 0);
+  return [
+    `Write exactly ${total} multiple-choice questions for a full-length NUST Entry Test (NET) mock paper.`,
+    "Subjects:",
+    brief,
+    "",
+    "Balanced NET paper: mix of recall, application, and shortcut-rewarding questions across the subject's subtopics.",
+    "Return the questions grouped in the same subject order as listed above.",
+    "",
+    "STRICT OUTPUT CONTRACT. Respond with ONLY a raw JSON array, no markdown, no code fences, no commentary.",
+    "Each element must be exactly: {\"text\": string, \"options\": [4 distinct strings], \"correctIndex\": 0|1|2|3, \"explanation\": string}.",
+    "Every question needs exactly 4 options and exactly one correct answer.",
+    "explanation: 1-3 sentences. Name the correct option, give the key step or formula, and say why the most tempting distractor is wrong. Unicode math notation (x², √, π), never LaTeX.",
+    "The app reshuffles options at runtime, so refer to the correct option by its content — never by the letter A/B/C/D.",
+    "Distribute the correct answer uniformly across positions 0–3 — do not cluster it on one letter.",
+    "Write each question as a real exam stem. Never prefix with 'Mock', 'Practice', or subject names.",
+    "Use Unicode math notation directly — superscripts (x², x³), √, π, θ, ×, ÷, ±, →, ∞. Never caret notation, LaTeX, backslashes, or \\( \\) delimiters.",
+    "NET-level difficulty: single-concept questions solvable in ~54 seconds; no multi-step monsters, no trick options a real paper would never print.",
+  ].join("\n");
+}
+
+function mockSlug(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "") || "mock";
+}
+
+/** Distinct topic/subtopic pairs the bank holds for one subject, bank order. */
+function bankSubtopicSlots(subject: string): { topic: string; subtopic: string }[] {
+  const seen = new Map<string, { topic: string; subtopic: string }>();
+  for (const q of nustSeedQuestions) {
+    if (q.section !== subject) continue;
+    const key = `${q.topic}::${q.subtopic}`;
+    if (!seen.has(key)) seen.set(key, { topic: q.topic, subtopic: q.subtopic });
+  }
+  return [...seen.values()];
+}
+
+/**
+ * Deal `count` verbatim bank questions for one subject: full pool,
+ * shuffled, exposure ascending (never-seen first — stable, so ties stay
+ * random). Unique while the pool allows; cycles verbatim when exhausted
+ * (Groq-failure path). Never throws; empty pool yields nothing.
+ * Recording is the pipeline's job (once per deal) — this helper is pure.
+ */
+function dealBankVerbatim(
+  subject: string,
+  count: number,
+  idPrefix: string,
+): { questions: Question[]; bankIds: string[] } {
+  const pool = nustSeedQuestions.filter((q) => q.section === subject);
+  if (pool.length === 0 || count <= 0) return { questions: [], bankIds: [] };
+  let exposure: Record<string, number>;
+  try {
+    exposure = getExposure();
+  } catch {
+    exposure = {};
+  }
+  const ordered = [...pool]
+    .map((q, i) => ({ q, i, r: Math.random() }))
+    .sort((a, b) => (exposure[a.q.id] ?? 0) - (exposure[b.q.id] ?? 0) || a.r - b.r)
+    .map(({ q }) => q);
+  const questions: Question[] = [];
+  const bankIds: string[] = [];
+  for (let k = 0; k < count; k++) {
+    const pick = ordered[k % ordered.length];
+    bankIds.push(pick.id);
+    questions.push(
+      shuffleOptions({
+        id: `${idPrefix}-${k + 1}`,
+        section: pick.section,
+        topic: pick.topic,
+        subtopic: pick.subtopic,
+        text: sanitizeStem(pick.text),
+        options: [...pick.options],
+        correctIndex: pick.correctIndex,
+        explanation: sanitizeStem(pick.explanation),
+        isPlaceholder: false,
+      }),
+    );
+  }
+  return { questions, bankIds };
+}
+
+/**
+ * One Groq mock batch via the server-side /api/generate-mock route.
+ * Throws on ANY failure (route down, key unset, short/invalid items) —
+ * the caller falls back to verbatim bank cycling for the batch.
+ */
+async function tryGroqMockRoute(
+  batch: MockSubjectCount[],
+  batchIndex: number,
+  timeoutMs = 60000,
+): Promise<Question[]> {
+  if (typeof window === "undefined") throw new Error("groq mock route is client-side only");
+  const total = batch.reduce((n, s) => n + s.count, 0);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch("/api/generate-mock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subjects: batch }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`mock route http ${res.status}`);
+    const data = (await res.json()) as { items?: unknown };
+    const items = parseStrictDrillJson(JSON.stringify(data.items));
+    if (items.length !== total) throw new Error(`mock batch short: ${items.length}/${total}`);
+    // Items arrive grouped in subject order (per the prompt contract).
+    const out: Question[] = [];
+    let cursor = 0;
+    for (const block of batch) {
+      const slots = bankSubtopicSlots(block.subject);
+      for (let j = 0; j < block.count; j++) {
+        const g = items[cursor++];
+        const slot = slots.length > 0 ? slots[j % slots.length] : { topic: block.subject, subtopic: "General" };
+        out.push(
+          shuffleOptions({
+            id: `mock-${mockSlug(block.subject)}-g${batchIndex + 1}-${j + 1}`,
+            section: block.subject,
+            topic: slot.topic,
+            subtopic: slot.subtopic,
+            text: sanitizeStem(g.text),
+            options: g.options.map((o) => sanitizeStem(o)),
+            correctIndex: g.correctIndex,
+            explanation: sanitizeStem(g.explanation),
+            isPlaceholder: false,
+          } satisfies Question),
+        );
+      }
+    }
+    return out;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * THE full-mock pipeline. Bank-first per subject → remainder chunked into
+ * ≤12-question batches fired in parallel → per-batch verbatim fallback on
+ * failure. Records exposure + recency once per deal (StrictMode-safe via
+ * one shared in-flight promise). Never throws: worst case is a 200Q paper
+ * with some bank repeats.
+ */
+let inflightMock: Promise<Question[]> | null = null;
+
+export function buildMockQuestions(): Promise<Question[]> {
+  if (inflightMock) return inflightMock;
+  const run = async (): Promise<Question[]> => {
+    try {
+      const fills = planMockFill();
+      const slugOf = (s: string) => `mock-${mockSlug(s)}-b`;
+
+      // 1) Bank-first per subject (unique while the pool allows).
+      const bankBySubject = new Map<string, Question[]>();
+      const allBankIds: string[] = [];
+      fills.forEach((f, fi) => {
+        const dealt = dealBankVerbatim(f.subject, f.bankTake, `${slugOf(f.subject)}${fi}`);
+        bankBySubject.set(f.subject, dealt.questions);
+        allBankIds.push(...dealt.bankIds);
+      });
+
+      // 2) Groq remainder in parallel batches; per-batch bank fallback.
+      const batches = planMockBatches(fills);
+      const batchResults = await Promise.all(
+        batches.map(async (batch, bi) => {
+          try {
+            return await tryGroqMockRoute(batch, bi);
+          } catch {
+            const fb: Question[] = [];
+            for (const block of batch) {
+              const dealt = dealBankVerbatim(block.subject, block.count, `${slugOf(block.subject)}f${bi}`);
+              fb.push(...dealt.questions);
+              allBankIds.push(...dealt.bankIds);
+            }
+            return fb;
+          }
+        }),
+      );
+
+      // 3) Assemble in subject order: bank takes, then generated.
+      const genBySubject = new Map<string, Question[]>();
+      for (const qs of batchResults) {
+        for (const q of qs) {
+          const list = genBySubject.get(q.section) ?? [];
+          list.push(q);
+          genBySubject.set(q.section, list);
+        }
+      }
+      const paper: Question[] = [];
+      for (const f of fills) {
+        paper.push(...(bankBySubject.get(f.subject) ?? []));
+        paper.push(...(genBySubject.get(f.subject) ?? []));
+      }
+
+      // 4) One exposure + recency increment for the whole deal.
+      recordSeenQuestionIds(allBankIds);
+      recordExposureIds([...allBankIds, ...paper.map((q) => q.id)]);
+      return paper;
+    } catch {
+      // Absolute last resort (empty bank?): cycle the whole bank verbatim.
+      const fb: Question[] = [];
+      const bankIds: string[] = [];
+      for (let k = 0; k < MOCK_TOTAL_QUESTIONS; k++) {
+        const pick = nustSeedQuestions[k % Math.max(nustSeedQuestions.length, 1)];
+        if (!pick) break;
+        bankIds.push(pick.id);
+        fb.push(
+          shuffleOptions({
+            id: `mock-last-b${k + 1}`,
+            section: pick.section,
+            topic: pick.topic,
+            subtopic: pick.subtopic,
+            text: sanitizeStem(pick.text),
+            options: [...pick.options],
+            correctIndex: pick.correctIndex,
+            explanation: sanitizeStem(pick.explanation),
+            isPlaceholder: false,
+          }),
+        );
+      }
+      recordSeenQuestionIds(bankIds);
+      recordExposureIds([...bankIds, ...fb.map((q) => q.id)]);
+      return fb;
+    } finally {
+      if (inflightMock === promise) inflightMock = null;
+    }
+  };
+  const promise = run();
+  inflightMock = promise;
+  return promise;
 }
