@@ -66,6 +66,13 @@ import {
   timesSeen,
 } from "../src/engine/exposure.ts";
 import {
+  buildTrajectory,
+  formatDelta,
+  sessionAccuracy,
+  shortDate,
+  trajectoryStats,
+} from "../src/engine/trajectory.ts";
+import {
   getQuestionsForSession,
   getRecentQuestionIds,
   getAllTopics,
@@ -756,5 +763,95 @@ describe("FULL MOCK timer — 180min constant, expiry files time-pressure", () =
     );
     assert.ok(app.includes("PRINTING YOUR PAPER"), "no printing state");
     assert.ok(!app.includes("PAST PAPERS"), "past-papers label leaked");
+  });
+});
+
+describe("TRAJECTORY — long-term improvement graph", () => {
+  const mk = (id, date, correct, attempted, errCount) => ({
+    id,
+    date,
+    questionsAttempted: attempted,
+    correct,
+    mistakes: Array.from({ length: errCount }, (_, i) => ({
+      id: `m-${id}-${i}`,
+      questionId: `q${i}`,
+      topic: "Calculus",
+      subtopic: "Differentiation",
+      errorType: "concept-gap",
+      timestamp: date,
+      sessionId: id,
+    })),
+    durationSeconds: 60,
+  });
+
+  it("accuracy math per session", () => {
+    assert.equal(sessionAccuracy({ correct: 8, questionsAttempted: 20 }), 40);
+    assert.equal(sessionAccuracy({ correct: 14, questionsAttempted: 20 }), 70);
+    assert.equal(sessionAccuracy({ correct: 0, questionsAttempted: 0 }), 0);
+  });
+
+  it("orders chronologically even when filed out of order", () => {
+    const sessions = [mk("b", 3000, 11, 20, 9), mk("a", 1000, 8, 20, 12), mk("c", 2000, 10, 20, 10)];
+    const pts = buildTrajectory(sessions);
+    assert.deepEqual(
+      pts.map((p) => p.id),
+      ["a", "c", "b"],
+    );
+    assert.deepEqual(
+      pts.map((p) => p.accuracy),
+      [40, 50, 55],
+    );
+  });
+
+  it("first→latest delta sign: up, down, flat", () => {
+    const up = buildTrajectory([mk("a", 1, 8, 20, 12), mk("b", 2, 14, 20, 6)]);
+    assert.equal(trajectoryStats(up).delta, 30);
+    assert.equal(formatDelta(30), "+30");
+    const down = buildTrajectory([mk("a", 1, 14, 20, 6), mk("b", 2, 8, 20, 12)]);
+    assert.equal(trajectoryStats(down).delta, -30);
+    assert.equal(formatDelta(-30), "-30");
+    const flat = buildTrajectory([mk("a", 1, 10, 20, 10), mk("b", 2, 10, 20, 10)]);
+    assert.equal(trajectoryStats(flat).delta, 0);
+    assert.equal(formatDelta(0), "±0");
+  });
+
+  it("stats row math: count, first→latest, total reps", () => {
+    const pts = buildTrajectory([
+      mk("a", 1, 8, 20, 12),
+      mk("b", 2, 11, 20, 9),
+      mk("c", 3, 10, 20, 10),
+      mk("d", 4, 14, 20, 6),
+    ]);
+    const st = trajectoryStats(pts);
+    assert.deepEqual([st.count, st.first, st.latest, st.delta, st.totalReps], [4, 40, 70, 30, 80]);
+  });
+
+  it("empty trajectory stats are all zero; mocks count like normal sessions", () => {
+    assert.deepEqual(trajectoryStats([]), { count: 0, first: 0, latest: 0, delta: 0, totalReps: 0 });
+    assert.deepEqual(trajectoryStats(buildTrajectory([])), {
+      count: 0,
+      first: 0,
+      latest: 0,
+      delta: 0,
+      totalReps: 0,
+    });
+    const pts = buildTrajectory([mk("a", 1, 8, 20, 12), mk("mock-1", 2, 140, 200, 60)]);
+    assert.equal(trajectoryStats(pts).count, 2);
+    assert.equal(trajectoryStats(pts).totalReps, 220);
+  });
+
+  it("short dates read like 3 OCT", () => {
+    assert.equal(shortDate(new Date(2026, 9, 3, 12).getTime()), "3 OCT");
+  });
+
+  it("honest empty/single states, no chart library, wired into /app", () => {
+    const root = path.resolve(process.cwd());
+    const src = fs.readFileSync(path.join(root, "src/components/Trajectory.tsx"), "utf8");
+    assert.ok(src.includes("NO TRAJECTORY YET"), "0-session state missing");
+    assert.ok(src.includes("FILE ONE MORE SESSION TO DRAW THE LINE"), "1-session state missing");
+    assert.ok(src.includes("X = SESSION ORDER, NOT DAYS"), "order footnote missing");
+    assert.ok(!src.includes("recharts") && !src.includes("chart.js"), "chart library leaked");
+    const app = fs.readFileSync(path.join(root, "src/app/app/page.tsx"), "utf8");
+    assert.ok(app.includes("<Trajectory"), "not wired into /app");
   });
 });

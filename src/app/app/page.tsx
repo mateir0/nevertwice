@@ -7,6 +7,7 @@ import { Crosshair, ScrollText, Timer, Zap } from "lucide-react";
 import { Wordmark } from "@/components/Wordmark";
 import { WeaknessHeatmap } from "@/components/WeaknessHeatmap";
 import { RecentSessions } from "@/components/RecentSessions";
+import { Trajectory } from "@/components/Trajectory";
 import { BankCoverage } from "@/components/BankCoverage";
 import { DossierCustody } from "@/components/DossierCustody";
 import { OfflineBadge } from "@/components/OfflineBadge";
@@ -172,6 +173,8 @@ export default function AppDashboard() {
             title="WEAKNESS HEATMAP"
             emptyAction={{ href: "/session", label: "BEGIN" }}
           />
+
+          <Trajectory sessions={sessions} />
         </div>
 
         <div className="space-y-5">
