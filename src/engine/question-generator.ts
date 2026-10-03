@@ -544,7 +544,9 @@ async function tryGroqMockRoute(
       return await fetch("/api/generate-mock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subjects: batch }),
+        // batchIndex is informational ONLY (server log line) — the server
+        // ignores it for validation, quota, and Groq. Never content.
+        body: JSON.stringify({ subjects: batch, batchIndex }),
         signal: controller.signal,
       });
     } finally {

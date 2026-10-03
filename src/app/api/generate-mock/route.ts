@@ -5,6 +5,8 @@ import {
   MOCK_BATCH_MAX,
   type MockSubjectCount,
 } from "@/engine/question-generator";
+// Structured logging only — no behavior change: same statuses, same bodies.
+import { classifyGroqError, logError, logInfo, logWarn } from "@/lib/logger";
 
 /**
  * POST /api/generate-mock — server-side Groq cloud link of the full-mock chain.
@@ -137,6 +139,8 @@ function validSubjects(v: unknown): v is MockSubjectCount[] {
 }
 
 async function callGroq(prompt: string, apiKey: string, timeoutMs = 60000) {
+  const started = Date.now();
+  logInfo("groq_request_start", { model: GROQ_MODEL });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -176,53 +180,133 @@ async function callGroq(prompt: string, apiKey: string, timeoutMs = 60000) {
     };
     const content = data?.choices?.[0]?.message?.content;
     if (typeof content !== "string") throw new Error("groq bad shape");
-    return parseStrictDrillJson(content);
+    const items = parseStrictDrillJson(content);
+    logInfo("groq_request_success", { model: GROQ_MODEL, latency_ms: Date.now() - started });
+    return items;
+  } catch (err) {
+    // Short message only — never bodies, never anything content-bearing.
+    const message = err instanceof Error ? err.message.slice(0, 200) : "unknown";
+    logError("groq_request_error", {
+      model: GROQ_MODEL,
+      latency_ms: Date.now() - started,
+      error_type: classifyGroqError(err),
+      error_message: message,
+    });
+    throw err;
   } finally {
     clearTimeout(timer);
   }
 }
 
+const ROUTE = "/api/generate-mock";
+
+interface BatchCtx {
+  method: string;
+  started: number;
+  batchIndex: number;
+  subjects: MockSubjectCount[] | null;
+}
+
+/**
+ * Summary-level ONLY: one line per batch request — counts and the subject
+ * split, never per-question lines, never content.
+ */
+function logSummary(ctx: BatchCtx, ok: boolean): void {
+  const subject_split: Record<string, number> = {};
+  let total_questions = 0;
+  for (const s of ctx.subjects ?? []) {
+    subject_split[s.subject] = (subject_split[s.subject] ?? 0) + s.count;
+    total_questions += s.count;
+  }
+  logInfo("mock_session_summary", {
+    total_questions,
+    groq_batches_ok: ok ? 1 : 0,
+    fallback_batches: ok ? 0 : 1,
+    subject_split,
+  });
+}
+
+/**
+ * Logging response wrapper — same status/body/headers as before, plus:
+ * api_request on EVERY response; api_error + bank_fallback_triggered on
+ * every failure EXCEPT quota-spent (the client throws that through to the
+ * honest quota line — no fallback is taken, so none is logged). Any other
+ * non-2xx arms the client's per-batch verbatim bank fallback, so every
+ * such path logs it — no exceptions, no early returns that skip it.
+ */
+function respond(
+  ctx: BatchCtx,
+  status: number,
+  body: { error: string } | { items: unknown },
+  outcome: { ok: true } | { ok: false; reason: string; quotaSpent?: boolean },
+  headers?: Record<string, string>,
+): NextResponse {
+  logInfo("api_request", { route: ROUTE, method: ctx.method, status, latency_ms: Date.now() - ctx.started });
+  if (!outcome.ok) {
+    logError("api_error", { route: ROUTE, message: outcome.reason });
+    if (!outcome.quotaSpent) {
+      logWarn("bank_fallback_triggered", { reason: outcome.reason, batch_index: ctx.batchIndex });
+    }
+  }
+  logSummary(ctx, outcome.ok);
+  return NextResponse.json(body, headers ? { status, headers } : { status });
+}
+
 export async function POST(req: Request): Promise<NextResponse> {
+  const ctx: BatchCtx = { method: req.method, started: Date.now(), batchIndex: -1, subjects: null };
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     // Key unset (e.g. local dev without Groq) — client cycles the bank.
-    return NextResponse.json({ error: "groq-unconfigured" }, { status: 503 });
+    return respond(ctx, 503, { error: "groq-unconfigured" }, { ok: false, reason: "groq_unconfigured" });
   }
 
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "bad-json" }, { status: 400 });
+    return respond(ctx, 400, { error: "bad-json" }, { ok: false, reason: "validation_failed" });
   }
   // Cheap size guard before any validation work (JSON bomb / quota waste).
   try {
     if (JSON.stringify(body)?.length > MAX_BODY_BYTES) {
-      return NextResponse.json({ error: "body-too-large" }, { status: 413 });
+      return respond(ctx, 413, { error: "body-too-large" }, { ok: false, reason: "validation_failed" });
     }
   } catch {
-    return NextResponse.json({ error: "bad-json" }, { status: 400 });
+    return respond(ctx, 400, { error: "bad-json" }, { ok: false, reason: "validation_failed" });
   }
+  // Batch index is informational ONLY (feeds the fallback log line) — it
+  // never affects validation, quota, or Groq. Absent/invalid → -1.
+  const rawBi = (body as { batchIndex?: unknown } | null)?.batchIndex;
+  if (typeof rawBi === "number" && Number.isInteger(rawBi) && rawBi >= 0) ctx.batchIndex = rawBi;
   const subjects = (body as { subjects?: unknown } | null)?.subjects;
   if (!validSubjects(subjects)) {
     // Malformed requests never touch Groq and never consume rate-limit quota.
-    return NextResponse.json({ error: "bad-subjects" }, { status: 400 });
+    return respond(ctx, 400, { error: "bad-subjects" }, { ok: false, reason: "validation_failed" });
   }
+  ctx.subjects = subjects;
 
   // Quota guards BEFORE Groq. Daily print cap first (honest 429), then
   // the hourly batch bucket. Drills are untouched by both. Every 429
   // carries Retry-After so the client can back off (default 60s).
   const ip = clientIp(req);
   if (mockDailyLimited(ip)) {
-    return NextResponse.json(
+    // Quota spent: NO fallback is taken (client shows the honest quota
+    // line), so no bank_fallback_triggered here — only api_request/api_error.
+    return respond(
+      ctx,
+      429,
       { error: "mock-quota-spent" },
-      { status: 429, headers: { "retry-after": String(secondsUntilMidnight()) } },
+      { ok: false, reason: "mock-quota-spent", quotaSpent: true },
+      { "retry-after": String(secondsUntilMidnight()) },
     );
   }
   if (mockRateLimited(ip)) {
-    return NextResponse.json(
+    return respond(
+      ctx,
+      429,
       { error: "rate-limited" },
-      { status: 429, headers: { "retry-after": "60" } },
+      { ok: false, reason: "rate_limited" },
+      { "retry-after": "60" },
     );
   }
 
@@ -235,32 +319,42 @@ export async function POST(req: Request): Promise<NextResponse> {
     }
     return null;
   };
+  const groqReason = (e: unknown): string => {
+    const t = classifyGroqError(e);
+    return t === "http_429" ? "groq_429" : t === "timeout" ? "groq_timeout" : "groq_error";
+  };
   try {
     const items = await callGroq(prompt, apiKey);
-    return NextResponse.json({ items });
+    return respond(ctx, 200, { items }, { ok: true });
   } catch (first) {
     const ra = groqRetryAfter(first);
     if (ra !== null) {
       // Groq per-minute limit: no hot retry — answer 429 so the client
       // waits out the minute window and retries once.
-      return NextResponse.json(
+      return respond(
+        ctx,
+        429,
         { error: "groq-rate-limited" },
-        { status: 429, headers: { "retry-after": ra } },
+        { ok: false, reason: "groq_429" },
+        { "retry-after": ra },
       );
     }
     try {
       // One retry, same prompt and validation.
       const items = await callGroq(prompt, apiKey);
-      return NextResponse.json({ items });
+      return respond(ctx, 200, { items }, { ok: true });
     } catch (second) {
       const ra2 = groqRetryAfter(second);
       if (ra2 !== null) {
-        return NextResponse.json(
+        return respond(
+          ctx,
+          429,
           { error: "groq-rate-limited" },
-          { status: 429, headers: { "retry-after": ra2 } },
+          { ok: false, reason: "groq_429" },
+          { "retry-after": ra2 },
         );
       }
-      return NextResponse.json({ error: "groq-failed" }, { status: 502 });
+      return respond(ctx, 502, { error: "groq-failed" }, { ok: false, reason: groqReason(second) });
     }
   }
 }

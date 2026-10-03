@@ -7,6 +7,8 @@ import {
 // Server-only taxonomy import: topic/subtopic allowlist for prompt-injection
 // defense. (The generic engine never imports the exam config; routes may.)
 import { nustConfig } from "@/config/exams/nust";
+// Structured logging only — no behavior change: same statuses, same bodies.
+import { classifyGroqError, logError, logInfo, logWarn } from "@/lib/logger";
 
 /**
  * POST /api/generate-drill — server-side Groq cloud link of the drill chain.
@@ -114,6 +116,8 @@ function validTargets(v: unknown): v is DrillGenTarget[] {
 }
 
 async function callGroq(prompt: string, apiKey: string, timeoutMs = 30000) {
+  const started = Date.now();
+  logInfo("groq_request_start", { model: GROQ_MODEL });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -145,60 +149,105 @@ async function callGroq(prompt: string, apiKey: string, timeoutMs = 30000) {
     };
     const content = data?.choices?.[0]?.message?.content;
     if (typeof content !== "string") throw new Error("groq bad shape");
-    return parseStrictDrillJson(content);
+    const items = parseStrictDrillJson(content);
+    logInfo("groq_request_success", { model: GROQ_MODEL, latency_ms: Date.now() - started });
+    return items;
+  } catch (err) {
+    // Short message only — never bodies, never anything content-bearing.
+    const message = err instanceof Error ? err.message.slice(0, 200) : "unknown";
+    logError("groq_request_error", {
+      model: GROQ_MODEL,
+      latency_ms: Date.now() - started,
+      error_type: classifyGroqError(err),
+      error_message: message,
+    });
+    throw err;
   } finally {
     clearTimeout(timer);
   }
 }
 
+const ROUTE = "/api/generate-drill";
+
+/**
+ * Logging response wrapper — same status/body/headers as before, plus two
+ * log lines: api_request on EVERY response, and api_error + the MOST
+ * IMPORTANT line in the app (bank_fallback_triggered) on every failure.
+ * Any non-2xx here sends the client down the verbatim bank fallback, so
+ * every failure path logs it — no exceptions, no early returns that skip it.
+ */
+function respond(
+  method: string,
+  started: number,
+  status: number,
+  body: { error: string } | { items: unknown },
+  reason?: string,
+  headers?: Record<string, string>,
+): NextResponse {
+  logInfo("api_request", { route: ROUTE, method, status, latency_ms: Date.now() - started });
+  if (status >= 400 && reason) {
+    logError("api_error", { route: ROUTE, message: reason });
+    logWarn("bank_fallback_triggered", { reason });
+  }
+  return NextResponse.json(body, headers ? { status, headers } : { status });
+}
+
 export async function POST(req: Request): Promise<NextResponse> {
+  const started = Date.now();
+  const method = req.method;
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     // Key unset (e.g. local dev without Groq) — client skips to seed bank.
-    return NextResponse.json({ error: "groq-unconfigured" }, { status: 503 });
+    return respond(method, started, 503, { error: "groq-unconfigured" }, "groq_unconfigured");
   }
 
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "bad-json" }, { status: 400 });
+    return respond(method, started, 400, { error: "bad-json" }, "validation_failed");
   }
   // Cheap size guard before any validation work (JSON bomb / quota waste).
   try {
     if (JSON.stringify(body)?.length > MAX_BODY_BYTES) {
-      return NextResponse.json({ error: "body-too-large" }, { status: 413 });
+      return respond(method, started, 413, { error: "body-too-large" }, "validation_failed");
     }
   } catch {
-    return NextResponse.json({ error: "bad-json" }, { status: 400 });
+    return respond(method, started, 400, { error: "bad-json" }, "validation_failed");
   }
   const targets = (body as { targets?: unknown } | null)?.targets;
   if (!validTargets(targets)) {
     // Malformed (or off-taxonomy) requests never touch Groq and never
     // consume rate-limit quota.
-    return NextResponse.json({ error: "bad-targets" }, { status: 400 });
+    return respond(method, started, 400, { error: "bad-targets" }, "validation_failed");
   }
 
   // Quota guard BEFORE Groq: 10 generations per IP per hour. The client
   // treats 429 like any other failure and falls back to the seed bank.
   if (rateLimited(clientIp(req))) {
-    return NextResponse.json(
+    return respond(
+      method,
+      started,
+      429,
       { error: "rate-limited" },
-      { status: 429, headers: { "retry-after": "3600" } },
+      "rate_limited",
+      { "retry-after": "3600" },
     );
   }
 
   const prompt = buildDrillPrompt(targets);
   try {
     const items = await callGroq(prompt, apiKey);
-    return NextResponse.json({ items });
+    return respond(method, started, 200, { items });
   } catch {
     try {
       // One retry, same prompt and validation.
       const items = await callGroq(prompt, apiKey);
-      return NextResponse.json({ items });
-    } catch {
-      return NextResponse.json({ error: "groq-failed" }, { status: 502 });
+      return respond(method, started, 200, { items });
+    } catch (second) {
+      const t = classifyGroqError(second);
+      const reason = t === "http_429" ? "groq_429" : t === "timeout" ? "groq_timeout" : "groq_error";
+      return respond(method, started, 502, { error: "groq-failed" }, reason);
     }
   }
 }
