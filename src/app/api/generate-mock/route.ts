@@ -32,7 +32,16 @@ const VALID_SUBJECTS = new Set([
   "Intelligence",
 ]);
 
+/** Oversized JSON bodies are rejected before validation (quota cheap). */
+const MAX_BODY_BYTES = 4 * 1024;
+
 // ---------- per-IP rate limiting (SEPARATE mock bucket) ----------
+// SERVERLESS CAVEAT: these buckets are in-memory Maps — on Vercel each
+// serverless instance holds its own Map, so the limiter is best-effort
+// per instance, not a global counter. Groq's own 429 is the hard backstop:
+// the route answers 429 with Retry-After and the client backs off once,
+// then falls back to verbatim bank cycling — quota can never be forced
+// and the paper always completes.
 
 // One full mock ≈ 7 batches: 25 mock-batch requests per IP per hour
 // allows ~3 full mocks/hour without touching the drill bucket.
@@ -116,7 +125,11 @@ function validSubjects(v: unknown): v is MockSubjectCount[] {
   for (const s of v) {
     if (typeof s !== "object" || s === null) return false;
     const r = s as Record<string, unknown>;
-    if (typeof r.subject !== "string" || !VALID_SUBJECTS.has(r.subject)) return false;
+    // Subject allowlist doubles as prompt-injection defense: only the five
+    // NET subjects ever reach the Groq prompt. Length cap is belt-and-braces.
+    if (typeof r.subject !== "string" || r.subject.length > 32 || !VALID_SUBJECTS.has(r.subject)) {
+      return false;
+    }
     if (!Number.isInteger(r.count) || (r.count as number) < 1 || (r.count as number) > MOCK_BATCH_MAX) return false;
     total += r.count as number;
   }
@@ -179,6 +192,14 @@ export async function POST(req: Request): Promise<NextResponse> {
   let body: unknown;
   try {
     body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "bad-json" }, { status: 400 });
+  }
+  // Cheap size guard before any validation work (JSON bomb / quota waste).
+  try {
+    if (JSON.stringify(body)?.length > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: "body-too-large" }, { status: 413 });
+    }
   } catch {
     return NextResponse.json({ error: "bad-json" }, { status: 400 });
   }

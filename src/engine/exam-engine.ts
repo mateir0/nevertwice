@@ -292,6 +292,21 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 /**
+ * Prototype-pollution guard: JSON.parse is safe on its own (__proto__ lands
+ * as an own property), but merged/copied keys named __proto__/constructor/
+ * prototype can hijack Object.prototype downstream. Legit dossier exports
+ * never contain these keys — reject the whole file if any object does.
+ */
+const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+function hasDangerousKeys(v: Record<string, unknown>): boolean {
+  for (const k of Object.keys(v)) {
+    if (DANGEROUS_KEYS.has(k)) return true;
+  }
+  return false;
+}
+
+/**
  * Validate a parsed JSON value as a dossier snapshot. Accepts the exact
  * shape exportDossierSnapshot() writes; rejects anything else with an
  * honest one-line reason. Extra fields are ignored, optional fields
@@ -301,6 +316,9 @@ export function validateDossierImport(
   parsed: unknown,
 ): { ok: true; data: DossierExport } | { ok: false; error: string } {
   if (!isRecord(parsed)) return { ok: false, error: "Not a dossier file: expected a JSON object." };
+  if (hasDangerousKeys(parsed)) {
+    return { ok: false, error: "Not a dossier file: forbidden keys present." };
+  }
   const { weakness, sessions, lastDetail } = parsed;
   if (!Array.isArray(weakness) || !Array.isArray(sessions) || !Array.isArray(lastDetail)) {
     return {
@@ -312,6 +330,7 @@ export function validateDossierImport(
     const n = weakness[i] as Record<string, unknown>;
     if (
       !isRecord(n) ||
+      hasDangerousKeys(n) ||
       typeof n.topic !== "string" ||
       typeof n.subtopic !== "string" ||
       typeof n.mistakeCount !== "number" ||
@@ -328,6 +347,7 @@ export function validateDossierImport(
     const s = sessions[i] as Record<string, unknown>;
     if (
       !isRecord(s) ||
+      hasDangerousKeys(s) ||
       typeof s.id !== "string" ||
       typeof s.date !== "number" ||
       typeof s.questionsAttempted !== "number" ||
@@ -341,6 +361,7 @@ export function validateDossierImport(
       const m = (s.mistakes as unknown[])[j] as Record<string, unknown>;
       if (
         !isRecord(m) ||
+        hasDangerousKeys(m) ||
         typeof m.id !== "string" ||
         typeof m.questionId !== "string" ||
         typeof m.topic !== "string" ||
@@ -358,6 +379,7 @@ export function validateDossierImport(
     const d = lastDetail[i] as Record<string, unknown>;
     if (
       !isRecord(d) ||
+      hasDangerousKeys(d) ||
       typeof d.questionId !== "string" ||
       typeof d.section !== "string" ||
       typeof d.topic !== "string" ||

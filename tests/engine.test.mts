@@ -80,6 +80,7 @@ import {
   getQuestionsForSession,
   getRecentQuestionIds,
   getAllTopics,
+  nustConfig,
   nustSeedQuestions,
 } from "../src/config/exams/nust.ts";
 
@@ -947,5 +948,178 @@ describe("/app layout hierarchy — drill first, heatmap above the fold", () => 
     const custody = read("src/components/DossierCustody.tsx");
     assert.ok(custody.includes("EXPORT DOSSIER") && custody.includes("Filed locally in this browser"), "custody missing");
     assert.ok(app.includes("~54s") && app.includes("NEG. MARK"), "net minis missing");
+  });
+});
+
+describe("SECURITY AUDIT — secrets, injection, storage, headers", () => {
+  const root = path.resolve(process.cwd());
+  const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
+  const srcFiles = (() => {
+    const out = [];
+    const walk = (d) => {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const p = path.join(d, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (/\.(ts|tsx)$/.test(e.name)) out.push(p);
+      }
+    };
+    walk(path.join(root, "src"));
+    return out;
+  })();
+
+  it("no NEXT_PUBLIC secrets; key lives only in the two API routes", () => {
+    for (const f of srcFiles) {
+      const src = fs.readFileSync(f, "utf8");
+      const hits = src.match(/NEXT_PUBLIC_[A-Z_]+/g) ?? [];
+      for (const h of hits) {
+        assert.ok(src.includes(`no ${h}`), `${f} exposes ${h}`);
+      }
+    }
+    const keyHolders = srcFiles.filter((f) =>
+      fs.readFileSync(f, "utf8").includes("process.env.GROQ_API_KEY"),
+    );
+    assert.deepEqual(
+      keyHolders.map((f) => path.relative(root, f).replace(/\\/g, "/")).sort(),
+      ["src/app/api/generate-drill/route.ts", "src/app/api/generate-mock/route.ts"],
+      "key must live ONLY in the two API routes",
+    );
+  });
+
+  it("drill route allowlists topic/subtopic pairs; every bank pair passes it", () => {
+    const drill = read("src/app/api/generate-drill/route.ts");
+    assert.ok(drill.includes("nustConfig"), "taxonomy not imported");
+    assert.ok(drill.includes("TOPIC_SUBTOPICS"), "pair allowlist missing");
+    assert.ok(drill.includes("body-too-large"), "JSON size guard missing");
+    assert.ok(drill.includes("best-effort"), "serverless limiter caveat undocumented");
+    // Compatibility: the ENTIRE bank (hence all legit planner traffic) is
+    // taxonomy-clean, so the allowlist can never 400 a real drill.
+    const allowed = new Map();
+    for (const s of nustConfig.sections) {
+      for (const t of s.topics) allowed.set(t.name, new Set(t.subtopics));
+    }
+    for (const q of nustSeedQuestions) {
+      assert.ok(allowed.has(q.topic), `bank topic off-taxonomy: ${q.topic}`);
+      assert.ok(allowed.get(q.topic).has(q.subtopic), `bank pair off-taxonomy: ${q.topic}/${q.subtopic}`);
+    }
+    const mock = read("src/app/api/generate-mock/route.ts");
+    assert.ok(mock.includes("VALID_SUBJECTS"), "mock subject allowlist missing");
+    assert.ok(mock.includes("body-too-large"), "mock JSON size guard missing");
+  });
+
+  it("routes never leak key/stack; 429s carry Retry-After; Groq 429 falls back", () => {
+    for (const p of ["src/app/api/generate-drill/route.ts", "src/app/api/generate-mock/route.ts"]) {
+      const src = read(p);
+      // Real logging calls only — console.groq.com URLs in comments are fine.
+      assert.ok(!/console\.(log|error|warn|info|debug|trace)\s*\(/.test(src), `${p} logs (secret risk)`);
+      assert.ok(!src.includes("stack"), `${p} may leak stack traces`);
+      // The key may ONLY be interpolated into the outbound Groq Authorization
+      // header — never into a NextResponse body.
+      const keyUses = src.split("\n").filter((line) => line.includes("apiKey"));
+      for (const line of keyUses) {
+        assert.ok(
+          line.includes("Authorization: `Bearer ${apiKey}`") ||
+            line.includes("process.env.GROQ_API_KEY") ||
+            line.includes("callGroq(prompt, apiKey)") ||
+            line.includes("apiKey: string") ||
+            line.includes("const apiKey") ||
+            line.includes("if (!apiKey)") ||
+            line.includes("//"),
+          `${p} suspicious key use: ${line.trim()}`,
+        );
+      }
+      assert.ok(src.includes("retry-after"), `${p} 429 needs Retry-After`);
+    }
+    const drill = read("src/app/api/generate-drill/route.ts");
+    assert.ok(drill.includes("groq-failed"), "drill Groq failure must map to generic code");
+    const eng = read("src/engine/question-generator.ts");
+    assert.ok(eng.includes("mockRetryAfterMs"), "mock client must honor Retry-After");
+  });
+
+  it("XSS: no HTML sinks in src; displayMath carries the sanitize-first rule", () => {
+    for (const f of srcFiles) {
+      const raw = fs.readFileSync(f, "utf8");
+      // Scan code only — comments may NAME the forbidden sinks (see the
+      // sanitize-first rule in format-math.ts).
+      const code = raw
+        .split("\n")
+        .filter((line) => !/^\s*(\*|\/\/)/.test(line))
+        .join("\n");
+      assert.ok(!code.includes("dangerouslySetInnerHTML"), `${f} has an HTML sink`);
+      assert.ok(!code.includes(".innerHTML"), `${f} has an HTML sink`);
+    }
+    const fm = read("src/engine/format-math.ts");
+    assert.ok(fm.includes("sanitize first"), "sanitize-first rule missing");
+    const session = read("src/app/session/page.tsx");
+    assert.ok(session.includes("displayMath(question.text)"), "stem must render via displayMath");
+  });
+
+  it("dossier import rejects __proto__ payloads; no pollution possible", () => {
+    // NOTE: object literals can't carry own __proto__ keys (they set the
+    // prototype instead) — attacker payloads arrive via JSON.parse, which
+    // creates real own properties. Build them that way.
+    const evil = JSON.parse(
+      '{"weakness":[],"sessions":[],"lastDetail":[],"__proto__":{"polluted":true}}',
+    );
+    assert.ok(Object.keys(evil).includes("__proto__"), "fixture lost its __proto__ key");
+    assert.ok(!validateDossierImport(evil).ok, "top __proto__ accepted");
+    const evilNested = JSON.parse(
+      '{"weakness":[{"topic":"T","subtopic":"S","mistakeCount":1,"lastSeen":1,"trend":"rising","__proto__":{"p":1}}],"sessions":[],"lastDetail":[]}',
+    );
+    assert.ok(!validateDossierImport(evilNested).ok, "nested __proto__ accepted");
+    const evilCtor = JSON.parse(
+      '{"weakness":[],"sessions":[],"lastDetail":[],"constructor":{"prototype":{"p":1}}}',
+    );
+    assert.ok(!validateDossierImport(evilCtor).ok, "constructor key accepted");
+    assert.equal(({}).polluted, undefined, "prototype polluted");
+    // Exposure write path skips dangerous keys too (faked localStorage runs here).
+    recordExposureIds(["__proto__", "constructor", "prototype", "q-guard-test"]);
+    assert.equal(({}).polluted, undefined, "exposure polluted the prototype");
+    assert.equal(getExposure().__proto__, Object.prototype, "exposure map proto tainted");
+  });
+
+  it("service worker: /api/* network-only, versioned cache, old caches purged", () => {
+    const sw = read("public/sw.js");
+    assert.ok(sw.includes('startsWith("/api/")'), "api bypass missing");
+    assert.ok(sw.includes("nevertwice-v1"), "cache version missing");
+    assert.ok(sw.includes("caches.delete"), "old caches never purged");
+    assert.ok(sw.includes('request.method !== "GET"'), "non-GET could cache");
+    const reg = read("src/components/ServiceWorkerRegister.tsx");
+    assert.ok(reg.includes('register("/sw.js")'), "SW scope must stay root");
+    const badge = read("src/components/OfflineBadge.tsx");
+    assert.ok(badge.includes('"online"') && badge.includes("navigator.onLine"), "badge can stick");
+  });
+
+  it("security headers on all routes", () => {
+    const cfg = read("next.config.ts");
+    for (const h of ["X-Content-Type-Options", "X-Frame-Options", "Referrer-Policy", "Permissions-Policy"]) {
+      assert.ok(cfg.includes(h), `${h} missing`);
+    }
+    assert.ok(cfg.includes("nosniff") && cfg.includes("DENY"), "header values wrong");
+    assert.ok(cfg.includes('"/:path*"'), "headers must apply to all routes");
+  });
+
+  it("bug hunt: fill math, batching, timer exclusivity, tab state, single finish", () => {
+    const fills = planMockFill();
+    const fillTotal = fills.reduce((n, f) => n + f.bankTake + f.groqNeed, 0);
+    assert.equal(fillTotal, MOCK_TOTAL_QUESTIONS, "fill plan != 200");
+    const batches = planMockBatches(fills);
+    const batched = batches.flat(2).reduce((n, s) => n + s.count, 0);
+    const groqNeed = fills.reduce((n, f) => n + f.groqNeed, 0);
+    assert.equal(batched, groqNeed, "batches != Groq remainder (off-by-one)");
+    assert.ok(batches.every((b) => b.reduce((n, s) => n + s.count, 0) <= MOCK_BATCH_MAX), "oversize batch");
+    // Full-mock expiry at 180:00 files all 200 unanswered exactly once.
+    const allBlank = new Array(MOCK_TOTAL_QUESTIONS).fill(null);
+    const noErrs = new Array(MOCK_TOTAL_QUESTIONS).fill(null);
+    const expired = applyMockExpiry(allBlank, noErrs);
+    assert.equal(expired.answers.length, MOCK_TOTAL_QUESTIONS, "expiry changed length");
+    assert.ok(expired.answers.every((a) => a !== null), "blank survived expiry");
+    assert.ok(expired.errorKinds.every((e) => e === "time-pressure"), "non-time-pressure filing");
+    const session = read("src/app/session/page.tsx");
+    assert.ok(session.includes("if (!questions || isMock) return;"), "per-question timer runs in mock mode");
+    assert.ok(session.includes("if (!questions || !isMock || finishing) return;"), "mock clock runs in drill mode");
+    assert.ok(session.includes("if (finishing || !questions) return;"), "finish() can double-fire");
+    // Tabs: panes hide, never unmount — GENERATING/PRINTING state survives switches.
+    const app = read("src/app/app/page.tsx");
+    assert.ok(app.includes("hidden={tab !=="), "tab panes unmount (state lost)");
   });
 });

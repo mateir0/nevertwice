@@ -174,7 +174,15 @@ export function sanitizeStem(text: string): string {
   return out;
 }
 
-/** Display-ready question/option text: sanitized, then Unicode math. */
+/**
+ * Display-ready question/option text: sanitized, then Unicode math.
+ *
+ * SECURITY: the returned string must ONLY ever render via React text
+ * interpolation ({displayMath(...)} — React escapes it). Never use
+ * dangerouslySetInnerHTML, innerHTML, or a markdown renderer on Groq
+ * output, bank text, options, or explanations. If HTML rendering is ever
+ * needed, sanitize first (allowlist, no scripts/handlers) — no exceptions.
+ */
 export function displayMath(text: string): string {
   return formatMath(sanitizeStem(text));
 }

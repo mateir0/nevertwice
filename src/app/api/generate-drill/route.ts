@@ -4,6 +4,9 @@ import {
   parseStrictDrillJson,
   type DrillGenTarget,
 } from "@/engine/question-generator";
+// Server-only taxonomy import: topic/subtopic allowlist for prompt-injection
+// defense. (The generic engine never imports the exam config; routes may.)
+import { nustConfig } from "@/config/exams/nust";
 
 /**
  * POST /api/generate-drill — server-side Groq cloud link of the drill chain.
@@ -33,7 +36,25 @@ const VALID_ERRORS = new Set([
   "formula-error",
 ]);
 
+/**
+ * Prompt-injection allowlist: every topic/subtopic pair must exist in the
+ * NET taxonomy. Attacker strings ("Ignore previous instructions…") never
+ * reach the Groq prompt — they 400 here, before the rate limiter or Groq.
+ * The legit client (drill-planner) only ever sends taxonomy pairs.
+ */
+const TOPIC_SUBTOPICS: ReadonlyMap<string, ReadonlySet<string>> = new Map(
+  nustConfig.sections.flatMap((s) => s.topics.map((t) => [t.name, new Set(t.subtopics)] as const)),
+);
+
+/** Oversized JSON bodies are rejected before validation (quota cheap). */
+const MAX_BODY_BYTES = 8 * 1024;
+
 // ---------- per-IP rate limiting (Groq quota guard) ----------
+// SERVERLESS CAVEAT: these buckets are in-memory Maps — on Vercel each
+// serverless instance holds its own Map, so the limiter is best-effort
+// per instance, not a global counter. Groq's own 429 is the hard backstop:
+// ANY Groq failure (429 included) falls through to the deterministic seed
+// bank, so quota can never be forced and the feature never breaks.
 
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
@@ -77,8 +98,14 @@ function validTargets(v: unknown): v is DrillGenTarget[] {
   for (const t of v) {
     if (typeof t !== "object" || t === null) return false;
     const r = t as Record<string, unknown>;
-    if (typeof r.topic !== "string" || r.topic.length === 0) return false;
-    if (typeof r.subtopic !== "string" || r.subtopic.length === 0) return false;
+    // Length caps first (cheap), then taxonomy membership: unknown
+    // topic/subtopic pairs are prompt-injection attempts — reject.
+    if (typeof r.topic !== "string" || r.topic.length === 0 || r.topic.length > 100) return false;
+    if (typeof r.subtopic !== "string" || r.subtopic.length === 0 || r.subtopic.length > 100) {
+      return false;
+    }
+    const subs = TOPIC_SUBTOPICS.get(r.topic);
+    if (!subs || !subs.has(r.subtopic)) return false;
     if (typeof r.errorType !== "string" || !VALID_ERRORS.has(r.errorType)) return false;
     if (!Number.isInteger(r.count) || (r.count as number) < 1 || (r.count as number) > 8) return false;
     total += r.count as number;
@@ -137,16 +164,28 @@ export async function POST(req: Request): Promise<NextResponse> {
   } catch {
     return NextResponse.json({ error: "bad-json" }, { status: 400 });
   }
+  // Cheap size guard before any validation work (JSON bomb / quota waste).
+  try {
+    if (JSON.stringify(body)?.length > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: "body-too-large" }, { status: 413 });
+    }
+  } catch {
+    return NextResponse.json({ error: "bad-json" }, { status: 400 });
+  }
   const targets = (body as { targets?: unknown } | null)?.targets;
   if (!validTargets(targets)) {
-    // Malformed requests never touch Groq and never consume rate-limit quota.
+    // Malformed (or off-taxonomy) requests never touch Groq and never
+    // consume rate-limit quota.
     return NextResponse.json({ error: "bad-targets" }, { status: 400 });
   }
 
   // Quota guard BEFORE Groq: 10 generations per IP per hour. The client
   // treats 429 like any other failure and falls back to the seed bank.
   if (rateLimited(clientIp(req))) {
-    return NextResponse.json({ error: "rate-limited" }, { status: 429 });
+    return NextResponse.json(
+      { error: "rate-limited" },
+      { status: 429, headers: { "retry-after": "3600" } },
+    );
   }
 
   const prompt = buildDrillPrompt(targets);

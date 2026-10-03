@@ -11,6 +11,14 @@ export const EXPOSURE_KEY = "nevertwice-exposure";
 
 export type ExposureMap = Record<string, number>;
 
+/**
+ * Prototype-pollution guard: exposure ids are generated internally
+ * (drill-/mock- prefixes, bank ids), but a "__proto__" key assigned via
+ * map[key] = … would hijack Object.prototype instead of storing. Skip the
+ * three dangerous keys on read AND write — legit ids never match them.
+ */
+const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
 function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
@@ -25,6 +33,7 @@ export function getExposure(): ExposureMap {
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
     const out: ExposureMap = {};
     for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (DANGEROUS_KEYS.has(k)) continue;
       if (typeof v === "number" && Number.isFinite(v) && v > 0) out[k] = Math.floor(v);
     }
     return out;
@@ -48,7 +57,7 @@ export function recordExposureIds(ids: string[]): void {
   try {
     const map = getExposure();
     for (const id of ids) {
-      if (typeof id !== "string" || id.length === 0) continue;
+      if (typeof id !== "string" || id.length === 0 || DANGEROUS_KEYS.has(id)) continue;
       map[id] = (map[id] ?? 0) + 1;
     }
     localStorage.setItem(EXPOSURE_KEY, JSON.stringify(map));
