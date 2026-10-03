@@ -48,17 +48,9 @@
   to { opacity: 1; transform: scale(1); }
 }
 
-@keyframes shakeX {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-6px); }
-  40% { transform: translateX(5px); }
-  60% { transform: translateX(-4px); }
-  80% { transform: translateX(3px); }
-}
-
-@keyframes debriefIn {
-  from { opacity: 0; max-height: 0; }
-  to { opacity: 1; max-height: 800px; }
+@keyframes debriefContentIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ---- Dossier custom utilities ---- */
@@ -93,12 +85,17 @@
 
 /* Question card slides in when the question changes (key={question.id}). */
 @utility card-in {
-  animation: cardIn 320ms ease-out both;
+  animation: cardIn 240ms ease-out both;
 }
 
-/* Options + classification chips fade in; 40ms stagger set inline. */
+/* Options fade in; 40ms stagger set inline. */
 @utility stagger-fade {
   animation: staggerFade 300ms ease-out both;
+}
+
+/* Classification chips fade in together (no stagger) over 200ms. */
+@utility chip-fade {
+  animation: staggerFade 200ms ease-out both;
 }
 
 /* ✓/✗ badges */
@@ -106,15 +103,10 @@
   animation: popIn 200ms ease-out both;
 }
 
-/* Wrong-picked option */
-@utility shake-x {
-  animation: shakeX 300ms ease-out both;
-}
-
-/* DEBRIEF panel */
-@utility debrief-in {
-  animation: debriefIn 400ms ease both;
-  overflow: hidden;
+/* DEBRIEF panel: container mounts in final layout immediately (one instant
+   reflow); only the inner content animates (compositor-only). */
+@utility debrief-content-in {
+  animation: debriefContentIn 280ms ease-out both;
 }
 
 /* Film grain over the whole page */

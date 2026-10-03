@@ -13,17 +13,21 @@ import { nustConfig } from "@/config/exams/nust";
 
 const TOTAL_SECONDS = nustConfig.secondsPerQuestion;
 
-/** Post-answer debrief panel: the correct letter + why the answer is right. */
+/** Post-answer debrief panel: the correct letter + why the answer is right.
+ * The container mounts in its final layout immediately (one instant reflow);
+ * only the inner content animates (compositor-only opacity + translateY). */
 function Debrief({ question }: { question: Question }) {
   const letter = String.fromCharCode(65 + question.correctIndex);
   return (
-    <section className="debrief-in mt-4 border-t border-bronze pt-4" aria-label="Answer debrief">
-      <p className="font-display text-lg tracking-wide text-amber">
-        DEBRIEF — WHY {letter} IS RIGHT
-      </p>
-      <p className="mt-2 font-type text-[16px] leading-relaxed text-parchment">
-        {displayMath(question.explanation)}
-      </p>
+    <section className="mt-4 border-t border-bronze pt-4" aria-label="Answer debrief">
+      <div className="debrief-content-in">
+        <p className="font-display text-lg tracking-wide text-amber">
+          DEBRIEF — WHY {letter} IS RIGHT
+        </p>
+        <p className="mt-2 font-type text-[16px] leading-relaxed text-parchment">
+          {displayMath(question.explanation)}
+        </p>
+      </div>
     </section>
   );
 }
@@ -38,7 +42,7 @@ export default function SessionPage() {
   const [secondsLeft, setSecondsLeft] = useState(TOTAL_SECONDS);
   const [startTime] = useState(() => Date.now());
   const [finishing, setFinishing] = useState(false);
-  // True during the 700ms beat after a wrong answer is classified. While
+  // True during the 300ms beat after a wrong answer is classified. While
   // beating, auto-advance owns the transition — no NEXT/FINISH is rendered.
   const [advancing, setAdvancing] = useState(false);
 
@@ -163,7 +167,7 @@ export default function SessionPage() {
   }
 
   /**
-   * One-tap classification: commit the error kind, hold a 700ms beat so the
+   * One-tap classification: commit the error kind, hold a 300ms beat so the
    * tapped chip reads as selected (all chips disabled, no double-tap), then
    * auto-advance — or auto-finish on the last question. No second tap, ever.
    * The timer is already frozen after answering, so there is no race.
@@ -181,7 +185,7 @@ export default function SessionPage() {
       } else {
         setIndex((i) => Math.min(i + 1, questions.length - 1));
       }
-    }, 700);
+    }, 300);
   }
 
   return (
@@ -233,9 +237,9 @@ export default function SessionPage() {
                   aria-checked={picked}
                   disabled={isAnswered}
                   onClick={() => choose(i)}
-                  className={`bronze-frame flex items-center gap-4 bg-night p-5 text-left transition-all duration-200 disabled:cursor-default enabled:hover:translate-x-1 enabled:hover:border-amber enabled:hover:shadow-[0_0_18px_rgba(166,124,61,0.3)] ${wrongPick ? "shake-x" : "stagger-fade"}`}
+                  className={`bronze-frame flex items-center gap-4 bg-night p-5 text-left transition-all duration-200 disabled:cursor-default enabled:hover:translate-x-1 enabled:hover:border-amber enabled:hover:shadow-[0_0_18px_rgba(166,124,61,0.3)] stagger-fade`}
                   style={{
-                    animationDelay: wrongPick ? "0ms" : `${i * 40}ms`,
+                    animationDelay: `${i * 40}ms`,
                     borderLeft: revealed
                       ? "4px solid #6B7F4E"
                       : wrongPick
@@ -279,7 +283,7 @@ export default function SessionPage() {
                 TAP ONE — ADVANCES AUTOMATICALLY.
               </p>
               <div className="grid grid-cols-1 gap-2">
-                {ERROR_TYPES.map((t, ti) => {
+                {ERROR_TYPES.map((t) => {
                   const active = classified === t.value;
                   return (
                     <button
@@ -287,8 +291,8 @@ export default function SessionPage() {
                       onClick={() => classify(t.value)}
                       aria-pressed={active}
                       disabled={classified !== null}
-                      className={`chip stagger-fade text-left${active ? " chip-active" : ""}`}
-                      style={{ animationDelay: `${ti * 40}ms` }}
+                      className={`chip chip-fade text-left${active ? " chip-active" : ""}`}
+                      style={{ animationDelay: "0ms" }}
                     >
                       <span
                         className={`block font-type text-[15px] font-bold uppercase tracking-[0.12em] ${active ? "text-amber" : "text-parchment"}`}
